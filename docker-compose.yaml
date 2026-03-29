@@ -1,0 +1,14 @@
+services:
+  credit-system-postgres:
+    image: postgres:16.11-alpine3.23
+    container_name: credit-system-postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=CreditSystem
+    volumes:
+      - postgres-credit-system-data:/var/lib/postgresql/data
+volumes:
+  postgres-credit-system-data:
