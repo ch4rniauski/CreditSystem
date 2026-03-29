@@ -284,6 +284,24 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (!await db.CreditCurrencies.AsNoTracking().AnyAsync(cc =>
                 cc.CreditId == dto.CreditId && cc.CurrencyId == dto.CurrencyId, ct))
             return BadRequest("Сначала добавьте валюту к продукту.");
+
+        decimal? rateValue = null;
+        decimal? additivePercent = null;
+        if (dto.RateType == "fixed")
+        {
+            if (dto.RateValue == null) return BadRequest("Для фиксированной ставки требуется rateValue");
+            rateValue = dto.RateValue;
+        }
+        else if (dto.RateType == "floating")
+        {
+            if (dto.AdditivePercent == null) return BadRequest("Для плавающей ставки требуется additivePercent");
+            additivePercent = dto.AdditivePercent;
+        }
+        else
+        {
+            return BadRequest("Неверный тип ставки");
+        }
+
         var e = new InterestRate
         {
             CreditId = dto.CreditId,
@@ -291,8 +309,8 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             TermFromMonths = dto.TermFromMonths,
             TermToMonths = dto.TermToMonths,
             RateType = dto.RateType,
-            RateValue = dto.RateValue,
-            AdditivePercent = dto.AdditivePercent,
+            RateValue = rateValue,
+            AdditivePercent = additivePercent,
             ValidFrom = dto.ValidFrom,
             ValidTo = dto.ValidTo
         };
@@ -308,8 +326,25 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var e = await db.InterestRates.FindAsync([id], ct);
         if (e == null) return NotFound();
 
+        decimal? rateValue = null;
+        decimal? additivePercent = null;
+        if (dto.RateType == "fixed")
+        {
+            if (dto.RateValue == null) return BadRequest("Для фиксированной ставки требуется rateValue");
+            rateValue = dto.RateValue;
+        }
+        else if (dto.RateType == "floating")
+        {
+            if (dto.AdditivePercent == null) return BadRequest("Для плавающей ставки требуется additivePercent");
+            additivePercent = dto.AdditivePercent;
+        }
+        else
+        {
+            return BadRequest("Неверный тип ставки");
+        }
+
         decimal? oldVal = e.RateType == "fixed" ? e.RateValue : e.AdditivePercent;
-        var newVal = dto.RateType == "fixed" ? dto.RateValue : dto.AdditivePercent;
+        var newVal = dto.RateType == "fixed" ? rateValue : additivePercent;
 
         db.RatesHistories.Add(new RatesHistory
         {
@@ -328,8 +363,8 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         e.TermFromMonths = dto.TermFromMonths;
         e.TermToMonths = dto.TermToMonths;
         e.RateType = dto.RateType;
-        e.RateValue = dto.RateValue;
-        e.AdditivePercent = dto.AdditivePercent;
+        e.RateValue = rateValue;
+        e.AdditivePercent = additivePercent;
         e.ValidFrom = dto.ValidFrom;
         e.ValidTo = dto.ValidTo;
 
@@ -571,9 +606,35 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     private async Task<(bool Ok, string? Error, ResolvedTerms? Terms)> TryResolveTerms(
         int creditId, int currencyId, int termMonths, DateOnly issueDate, CancellationToken ct)
     {
+        var credit = await db.Credits.AsNoTracking().FirstOrDefaultAsync(c => c.Id == creditId, ct);
+        if (credit == null)
+            return (false, "Кредитный продукт не найден.", null);
+
+        if (!await db.CreditCurrencies.AsNoTracking().AnyAsync(cc => cc.CreditId == creditId && cc.CurrencyId == currencyId, ct))
+            return (false, "Валюта не привязана к выбранному кредитному продукту.", null);
+
+        if (termMonths < credit.MinTermMonths || termMonths > credit.MaxTermMonths)
+            return (false, $"Срок должен быть в диапазоне {credit.MinTermMonths} - {credit.MaxTermMonths} месяцев.", null);
+
         var row = await ResolveInterestRow(creditId, currencyId, termMonths, issueDate, ct);
         if (row == null)
+        {
+            var anyTermForCurrency = await db.InterestRates.AsNoTracking().AnyAsync(r =>
+                r.CreditId == creditId && r.CurrencyId == currencyId
+                && termMonths >= r.TermFromMonths && termMonths <= r.TermToMonths,
+                ct);
+            if (!anyTermForCurrency)
+                return (false, "Нет процентной ставки для указанного срока в этой валюте.", null);
+
+            var anyValidDate = await db.InterestRates.AsNoTracking().AnyAsync(r =>
+                r.CreditId == creditId && r.CurrencyId == currencyId
+                && r.ValidFrom <= issueDate && (r.ValidTo == null || r.ValidTo >= issueDate),
+                ct);
+            if (!anyValidDate)
+                return (false, "Нет действующей процентной ставки на указанную дату.", null);
+
             return (false, "Не найдена процентная ставка для указных условий.", null);
+        }
 
         if (row.RateType == "fixed")
         {
@@ -742,10 +803,10 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<List<GuarantorRow>>> GetGuarantors(CancellationToken ct)
     {
         var q = from g in db.Guarantors.AsNoTracking()
-            join c in db.Contracts.AsNoTracking() on g.ContractId equals c.Id
-            join cr in db.Credits.AsNoTracking() on c.CreditId equals cr.Id
-            join p in db.PhysPersons.AsNoTracking() on g.PhysPersonId equals p.ClientId
-            select new GuarantorRow(g.Id, cr.Name, p.FullName, p.PassportSeries, p.PassportNumber);
+                join c in db.Contracts.AsNoTracking() on g.ContractId equals c.Id
+                join cr in db.Credits.AsNoTracking() on c.CreditId equals cr.Id
+                join p in db.PhysPersons.AsNoTracking() on g.PhysPersonId equals p.ClientId
+                select new GuarantorRow(g.Id, cr.Name, p.FullName, p.PassportSeries, p.PassportNumber);
         return Ok(await q.ToListAsync(ct));
     }
 

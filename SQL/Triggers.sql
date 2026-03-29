@@ -97,22 +97,3 @@ CREATE TRIGGER trg_check_guarantor
 BEFORE INSERT ON guarantors
 FOR EACH ROW
 EXECUTE FUNCTION check_guarantor_allowed();
-
-
-
-CREATE OR REPLACE FUNCTION lock_contract_after_sign()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- нельзя изменять договор, если он уже Оформлен или Завершён
-    IF OLD.status IN ('Оформлен', 'Завершён') THEN
-        RAISE EXCEPTION 'Нельзя изменять договор после оформления';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_lock_contract_after_sign
-BEFORE UPDATE ON contracts
-FOR EACH ROW
-EXECUTE FUNCTION lock_contract_after_sign();

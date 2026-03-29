@@ -109,8 +109,8 @@
               <option value="floating">Плавающая</option>
             </select>
           </label>
-          <label>Ставка (fixed) <input type="number" step="0.0001" formControlName="rateValue" /></label>
-          <label>Добавка (floating) <input type="number" step="0.0001" formControlName="additivePercent" /></label>
+          <label>Ставка % <input type="number" step="0.0001" placeholder="0.0000" [required]="isFixedRate()" [disabled]="!isFixedRate()" formControlName="rateValue" /></label>
+          <label>Добавка % <input type="number" step="0.0001" placeholder="0.0000" [required]="isFloatingRate()" [disabled]="!isFloatingRate()" formControlName="additivePercent" /></label>
           <label>С действия <input type="date" formControlName="validFrom" /></label>
           <label>По <input type="date" formControlName="validTo" /></label>
           <button type="submit" [disabled]="rateForm.invalid">Добавить</button>

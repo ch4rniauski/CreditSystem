@@ -6,7 +6,11 @@
         <label>Название <input formControlName="name" /></label>
         <label>Форма собственности <input formControlName="ownershipType" /></label>
         <label>Юр. адрес <input formControlName="legalAddress" /></label>
-        <label>Телефон <input formControlName="phone" /></label>
+        <label>Телефон <input formControlName="phone" placeholder="+375291234567" />
+          @if (legalForm.get('phone')?.hasError('invalidPhone')) {
+            <span class="err-msg">Допустимы только +, цифры и пробелы</span>
+          }
+        </label>
         <button type="submit" [disabled]="legalForm.invalid">
           {{ legalEditId() === null ? 'Добавить' : 'Сохранить' }}
         </button>
@@ -41,10 +45,22 @@
       <h2>Физические лица</h2>
       <form [formGroup]="physForm" (ngSubmit)="savePhys()" class="form-grid">
         <label>ФИО <input formControlName="fullName" /></label>
-        <label>Серия паспорта <input formControlName="passportSeries" maxlength="2" /></label>
-        <label>Номер паспорта <input formControlName="passportNumber" maxlength="7" /></label>
+        <label>Серия паспорта <input formControlName="passportSeries" maxlength="2" placeholder="AB" />
+          @if (physForm.get('passportSeries')?.hasError('invalidPassportSeries')) {
+            <span class="err-msg">Только 2 буквы</span>
+          }
+        </label>
+        <label>Номер паспорта <input formControlName="passportNumber" maxlength="7" placeholder="1234567" />
+          @if (physForm.get('passportNumber')?.hasError('invalidPassportNumber')) {
+            <span class="err-msg">Только 7 цифр</span>
+          }
+        </label>
         <label>Адрес <input formControlName="actualAddress" /></label>
-        <label>Телефон <input formControlName="phone" /></label>
+        <label>Телефон <input formControlName="phone" placeholder="+375291234567" />
+          @if (physForm.get('phone')?.hasError('invalidPhone')) {
+            <span class="err-msg">Допустимы только +, цифры и пробелы</span>
+          }
+        </label>
         <button type="submit" [disabled]="physForm.invalid">
           {{ physEditId() === null ? 'Добавить' : 'Сохранить' }}
         </button>

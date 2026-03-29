@@ -19,7 +19,7 @@
       <label
         >Валюта
         <select formControlName="currencyId">
-          @for (c of currencies(); track c.id) {
+          @for (c of availableCurrencies(); track c.id) {
             <option [value]="c.id">{{ c.code }}</option>
           }
         </select>

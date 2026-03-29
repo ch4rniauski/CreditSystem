@@ -17,6 +17,7 @@ export default class ContractsPage implements OnInit {
   readonly rows = signal<ContractRow[]>([]);
   readonly credits = signal<CreditProductRow[]>([]);
   readonly currencies = signal<CurrencyRow[]>([]);
+  readonly availableCurrencies = signal<CurrencyRow[]>([]);
   readonly clientOptions = signal<{ id: number; kind: string; label: string }[]>([]);
   readonly error = signal<string | null>(null);
 
@@ -31,16 +32,29 @@ export default class ContractsPage implements OnInit {
 
   ngOnInit() {
     this.reload();
+
     this.api.creditProducts().subscribe((c) => {
       this.credits.set(c);
       const first = c[0]?.id ?? 0;
-      if (first) this.form.patchValue({ creditId: first });
+      if (first) {
+        this.form.patchValue({ creditId: first });
+        this.loadCreditConstraints(first);
+      }
     });
+
     this.api.currencies().subscribe((c) => {
       this.currencies.set(c);
       const first = c[0]?.id ?? 0;
-      if (first) this.form.patchValue({ currencyId: first });
+      if (first) {
+        this.form.patchValue({ currencyId: first });
+        this.availableCurrencies.set(c);
+      }
     });
+
+    this.form.get('creditId')?.valueChanges.subscribe((creditId) => {
+      if (creditId) this.loadCreditConstraints(Number(creditId));
+    });
+
     this.api.legalClients().subscribe((legals) => {
       this.api.physicalClients().subscribe((phys) => {
         const opts = [
@@ -62,9 +76,51 @@ export default class ContractsPage implements OnInit {
     });
   }
 
+  private loadCreditConstraints(creditId: number) {
+    const credit = this.credits().find((c) => c.id === creditId);
+    if (!credit) return;
+
+    if (this.form.controls.termMonths.value < credit.minTermMonths) {
+      this.form.patchValue({ termMonths: credit.minTermMonths });
+    }
+    if (this.form.controls.termMonths.value > credit.maxTermMonths) {
+      this.form.patchValue({ termMonths: credit.maxTermMonths });
+    }
+
+    this.api.creditCurrencies(creditId).subscribe((rows) => {
+      const matchedIds = rows
+        .map((r) => this.currencies().find((c) => c.code === r.currencyCode)?.id)
+        .filter((id): id is number => !!id);
+      const available = this.currencies().filter((c) => matchedIds.includes(c.id));
+      this.availableCurrencies.set(available.length ? available : this.currencies());
+
+      if (!available.some((c) => c.id === this.form.controls.currencyId.value)) {
+        const first = available[0]?.id ?? this.currencies()[0]?.id ?? 0;
+        if (first) this.form.patchValue({ currencyId: first });
+      }
+    });
+  }
+
   create() {
     if (this.form.invalid) return;
     const v = this.form.getRawValue();
+
+    const credit = this.credits().find((c) => c.id === Number(v.creditId));
+    if (!credit) {
+      this.error.set('Выбранный кредитный продукт не найден.');
+      return;
+    }
+
+    if (v.termMonths < credit.minTermMonths || v.termMonths > credit.maxTermMonths) {
+      this.error.set(`Срок должен быть от ${credit.minTermMonths} до ${credit.maxTermMonths} месяцев.`);
+      return;
+    }
+
+    if (!this.availableCurrencies().some((c) => c.id === Number(v.currencyId))) {
+      this.error.set('Выбранная валюта не доступна для этого кредитного продукта.');
+      return;
+    }
+
     this.api
       .createContract({
         clientId: Number(v.clientId),

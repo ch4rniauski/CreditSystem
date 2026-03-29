@@ -1,1 +1,44 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Error and validation messages */
+.err-msg {
+  display: block;
+  font-size: 0.85rem;
+  color: #d32f2f;
+  margin-top: 0.25rem;
+}
+
+.err {
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+/* Form styling */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+input[type="number"]:invalid,
+input[type="text"]:invalid,
+input[type="email"]:invalid,
+input[type="date"]:invalid {
+  border-color: #d32f2f;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Placeholder styling */
+input::placeholder {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}

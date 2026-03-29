@@ -12,6 +12,7 @@ import {
   PenaltyRow,
   PenaltyWriteDto,
 } from '../../core/api.service';
+import { positiveDecimalValidator } from '../../core/validators';
 
 @Component({
   selector: 'app-credit-products',
@@ -37,6 +38,9 @@ export default class CreditProductsPage implements OnInit {
     return this.currencies().filter((c) => codes.has(c.code));
   });
 
+  readonly isFixedRate = computed(() => this.rateForm.get('rateType')?.value === 'fixed');
+  readonly isFloatingRate = computed(() => this.rateForm.get('rateType')?.value === 'floating');
+
   readonly productForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
     description: [''],
@@ -49,7 +53,7 @@ export default class CreditProductsPage implements OnInit {
 
   readonly ccForm = this.fb.nonNullable.group({
     currencyId: [0, Validators.min(1)],
-    baseInterestRate: [0, [Validators.required, Validators.min(0)]],
+    baseInterestRate: [0, [Validators.required, Validators.min(0), positiveDecimalValidator()]],
   });
 
   readonly rateForm = this.fb.nonNullable.group({
@@ -65,7 +69,7 @@ export default class CreditProductsPage implements OnInit {
 
   readonly penForm = this.fb.nonNullable.group({
     penaltyType: ['early_repayment', Validators.required],
-    valuePercent: [0, [Validators.required, Validators.min(0)]],
+    valuePercent: [0, [Validators.required, Validators.min(0), positiveDecimalValidator()]],
     validFrom: ['', Validators.required],
   });
 
@@ -76,6 +80,15 @@ export default class CreditProductsPage implements OnInit {
       const first = c[0]?.id ?? 0;
       this.ccForm.patchValue({ currencyId: first });
       this.rateForm.patchValue({ currencyId: first });
+    });
+
+    // Слушатель для очистки невалидных полей при смене типа ставки
+    this.rateForm.get('rateType')?.valueChanges.subscribe(() => {
+      if (this.isFixedRate()) {
+        this.rateForm.patchValue({ additivePercent: null }, { emitEvent: false });
+      } else {
+        this.rateForm.patchValue({ rateValue: null }, { emitEvent: false });
+      }
     });
   }
 
@@ -200,19 +213,33 @@ export default class CreditProductsPage implements OnInit {
     const pid = this.selectedProductId();
     if (pid === null || this.rateForm.invalid) return;
     const v = this.rateForm.getRawValue();
+
     const body: InterestRateWriteDto = {
       creditId: pid,
       currencyId: Number(v.currencyId),
       termFromMonths: v.termFromMonths,
       termToMonths: v.termToMonths,
       rateType: v.rateType,
-      rateValue: v.rateValue,
-      additivePercent: v.additivePercent,
+      rateValue: v.rateType === 'fixed' ? v.rateValue : null,
+      additivePercent: v.rateType === 'floating' ? v.additivePercent : null,
       validFrom: v.validFrom,
       validTo: v.validTo || null,
     };
     this.api.createInterestRate(body).subscribe({
-      next: () => this.reloadDetails(),
+      next: () => {
+        this.rateForm.reset({
+          currencyId: 0,
+          termFromMonths: 1,
+          termToMonths: 12,
+          rateType: 'fixed',
+          rateValue: null,
+          additivePercent: null,
+          validFrom: '',
+          validTo: '',
+        });
+        this.reloadDetails();
+        this.error.set(null);
+      },
       error: (e) => this.error.set(e.error?.title ?? e.error ?? 'Ошибка'),
     });
   }
