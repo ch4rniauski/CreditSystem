@@ -1,0 +1,33 @@
+    <h1>Валюты</h1>
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+      <label>Код <input formControlName="code" /></label>
+      <label>Название <input formControlName="name" /></label>
+      <button type="submit" [disabled]="form.invalid">{{ editingId() === null ? 'Добавить' : 'Сохранить' }}</button>
+      @if (editingId() !== null) {
+        <button type="button" (click)="cancelEdit()">Отмена</button>
+      }
+    </form>
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }
+    <table>
+      <thead>
+        <tr>
+          <th>Код</th>
+          <th>Название</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of rows(); track r.id) {
+          <tr>
+            <td>{{ r.code }}</td>
+            <td>{{ r.name }}</td>
+            <td>
+              <button type="button" (click)="edit(r)">Изменить</button>
+              <button type="button" (click)="remove(r)">Удалить</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>

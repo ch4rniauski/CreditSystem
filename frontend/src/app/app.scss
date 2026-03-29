@@ -1,0 +1,32 @@
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #1a1a2e;
+  color: #eee;
+}
+
+.app-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.app-header a {
+  color: #aac;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.app-header a.active,
+.app-header a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.app-main {
+  padding: 1rem 1.25rem;
+  max-width: 1200px;
+}

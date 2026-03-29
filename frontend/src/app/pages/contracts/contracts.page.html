@@ -1,0 +1,67 @@
+    <h1>Кредитные договоры</h1>
+    <form [formGroup]="form" (ngSubmit)="create()" class="form-grid">
+      <label
+        >Клиент
+        <select formControlName="clientId">
+          @for (o of clientOptions(); track o.id) {
+            <option [value]="o.id">{{ o.kind }}: {{ o.label }}</option>
+          }
+        </select>
+      </label>
+      <label
+        >Продукт
+        <select formControlName="creditId">
+          @for (p of credits(); track p.id) {
+            <option [value]="p.id">{{ p.name }} ({{ p.clientType === 'legal' ? 'ЮЛ' : 'ФЛ' }})</option>
+          }
+        </select>
+      </label>
+      <label
+        >Валюта
+        <select formControlName="currencyId">
+          @for (c of currencies(); track c.id) {
+            <option [value]="c.id">{{ c.code }}</option>
+          }
+        </select>
+      </label>
+      <label>Сумма <input type="number" formControlName="contractAmount" /></label>
+      <label>Срок (мес.) <input type="number" formControlName="termMonths" /></label>
+      <label>Дата договора <input type="date" formControlName="issueDate" /></label>
+      <button type="submit" [disabled]="form.invalid">Создать черновик</button>
+    </form>
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }
+
+    <table>
+      <thead>
+        <tr>
+          <th>Продукт</th>
+          <th>Клиент</th>
+          <th>Валюта</th>
+          <th>Сумма</th>
+          <th>Статус</th>
+          <th>Остаток</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of rows(); track c.id) {
+          <tr>
+            <td>{{ c.creditName }}</td>
+            <td>{{ c.clientDisplay }}</td>
+            <td>{{ c.currencyCode }}</td>
+            <td>{{ c.contractAmount }}</td>
+            <td>{{ c.status }}</td>
+            <td>{{ c.remainingPrincipal }}</td>
+            <td>
+              @if (c.status === 'Оформляется') {
+                <button type="button" (click)="sign(c)">Оформить</button>
+                <button type="button" (click)="remove(c)">Удалить</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>

@@ -1,0 +1,22 @@
+      .hint {
+        color: #555;
+        font-size: 0.9rem;
+      }
+      .form-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+        margin-bottom: 1rem;
+      }
+      .err {
+        color: #a40000;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 0.35rem 0.5rem;
+      }

@@ -1,0 +1,80 @@
+    <h1>Клиенты</h1>
+
+    <section class="panel">
+      <h2>Юридические лица</h2>
+      <form [formGroup]="legalForm" (ngSubmit)="saveLegal()" class="form-grid">
+        <label>Название <input formControlName="name" /></label>
+        <label>Форма собственности <input formControlName="ownershipType" /></label>
+        <label>Юр. адрес <input formControlName="legalAddress" /></label>
+        <label>Телефон <input formControlName="phone" /></label>
+        <button type="submit" [disabled]="legalForm.invalid">
+          {{ legalEditId() === null ? 'Добавить' : 'Сохранить' }}
+        </button>
+        @if (legalEditId() !== null) {
+          <button type="button" (click)="cancelLegal()">Отмена</button>
+        }
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Телефон</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of legalRows(); track r.clientId) {
+            <tr>
+              <td>{{ r.name }}</td>
+              <td>{{ r.phone ?? '—' }}</td>
+              <td>
+                <button type="button" (click)="editLegal(r)">Изменить</button>
+                <button type="button" (click)="deleteClient(r.clientId, r.name)">Удалить</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Физические лица</h2>
+      <form [formGroup]="physForm" (ngSubmit)="savePhys()" class="form-grid">
+        <label>ФИО <input formControlName="fullName" /></label>
+        <label>Серия паспорта <input formControlName="passportSeries" maxlength="2" /></label>
+        <label>Номер паспорта <input formControlName="passportNumber" maxlength="7" /></label>
+        <label>Адрес <input formControlName="actualAddress" /></label>
+        <label>Телефон <input formControlName="phone" /></label>
+        <button type="submit" [disabled]="physForm.invalid">
+          {{ physEditId() === null ? 'Добавить' : 'Сохранить' }}
+        </button>
+        @if (physEditId() !== null) {
+          <button type="button" (click)="cancelPhys()">Отмена</button>
+        }
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th>ФИО</th>
+            <th>Паспорт</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of physRows(); track r.clientId) {
+            <tr>
+              <td>{{ r.fullName }}</td>
+              <td>{{ r.passportSeries }} {{ r.passportNumber }}</td>
+              <td>
+                <button type="button" (click)="editPhys(r)">Изменить</button>
+                <button type="button" (click)="deleteClient(r.clientId, r.fullName)">Удалить</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }

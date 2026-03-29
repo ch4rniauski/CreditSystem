@@ -1,0 +1,143 @@
+    <h1>Отчёты</h1>
+
+    <section class="panel">
+      <h2>7. Ожидаемые ежемесячные платежи (при оформлении)</h2>
+      <form [formGroup]="r7Form" (ngSubmit)="runExpected()" class="form-grid">
+        <label
+          >Продукт
+          <select formControlName="creditId">
+            @for (p of credits(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </label>
+        <label
+          >Валюта
+          <select formControlName="currencyId">
+            @for (c of currencies(); track c.id) {
+              <option [value]="c.id">{{ c.code }}</option>
+            }
+          </select>
+        </label>
+        <label>Сумма <input type="number" formControlName="contractAmount" /></label>
+        <label>Срок (мес.) <input type="number" formControlName="termMonths" /></label>
+        <label>Дата договора <input type="date" formControlName="issueDate" /></label>
+        <button type="submit" [disabled]="r7Form.invalid">Рассчитать</button>
+      </form>
+      @if (expected().length) {
+        <table>
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Дата</th>
+              <th>Платёж</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of expected(); track r.installmentNumber) {
+              <tr>
+                <td>{{ r.installmentNumber }}</td>
+                <td>{{ r.plannedDate }}</td>
+                <td>{{ r.expectedPayment | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="panel">
+      <h2>8–9. Текущий долг и календарь платежей</h2>
+      <label
+        >Договор
+        <select [value]="contractPick()" (change)="pickContract(+$any($event.target).value)">
+          @for (c of reportContracts(); track c.id) {
+            <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }} ({{ c.status }})</option>
+          }
+        </select>
+      </label>
+      <button type="button" (click)="loadDebt()" [disabled]="contractPick() === 0">Обновить долг</button>
+      <button type="button" (click)="loadCalendar()" [disabled]="contractPick() === 0">Обновить календарь</button>
+
+      @if (debt()) {
+        <h3>Текущий долг</h3>
+        <ul>
+          <li>Штраф просрочки: {{ debt()!.latePenaltyAccrued | number: '1.2-2' }}</li>
+          <li>Проценты к оплате: {{ debt()!.interestDue | number: '1.2-2' }}</li>
+          <li>Основной долг к оплате (период): {{ debt()!.principalDueThisPeriod | number: '1.2-2' }}</li>
+          <li>Остаток основного долга: {{ debt()!.remainingPrincipal | number: '1.2-2' }}</li>
+        </ul>
+      }
+      @if (calendar().length) {
+        <h3>Календарь</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Платёж</th>
+              <th>Осн.</th>
+              <th>%</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of calendar(); track l.plannedDate) {
+              <tr>
+                <td>{{ l.plannedDate }}</td>
+                <td>{{ l.expectedPayment | number: '1.2-2' }}</td>
+                <td>{{ l.expectedPrincipal | number: '1.2-2' }}</td>
+                <td>{{ l.expectedInterest | number: '1.2-2' }}</td>
+                <td>{{ l.status }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="panel">
+      <h2>10. История изменений условий продукта</h2>
+      <label
+        >Продукт
+        <select [value]="historyCreditId()" (change)="onHistoryCreditChange(+$any($event.target).value)">
+          @for (p of credits(); track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </label>
+      <button type="button" (click)="loadHistory()">Загрузить</button>
+      @if (history().length) {
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Тип</th>
+              <th>Валюта</th>
+              <th>Было</th>
+              <th>Стало</th>
+              <th>Сроки</th>
+              <th>Штраф</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of history(); track $index) {
+              <tr>
+                <td>{{ h.changeDate | date: 'short' }}</td>
+                <td>{{ h.kind }}</td>
+                <td>{{ h.currencyCode ?? '—' }}</td>
+                <td>{{ h.oldValuePercent }}</td>
+                <td>{{ h.newValuePercent }}</td>
+                <td>
+                  @if (h.oldTermFrom != null) {
+                    {{ h.oldTermFrom }}-{{ h.oldTermTo }} → {{ h.newTermFrom }}-{{ h.newTermTo }}
+                  } @else {
+                    —
+                  }
+                </td>
+                <td>{{ h.penaltyType ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>

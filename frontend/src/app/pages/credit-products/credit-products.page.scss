@@ -1,0 +1,38 @@
+      .panel {
+        margin: 1.25rem 0;
+        padding: 1rem;
+        background: #f6f6f6;
+        border-radius: 6px;
+      }
+      .form-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: flex-end;
+      }
+      .form-grid.small label {
+        font-size: 0.85rem;
+      }
+      .form-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .err {
+        color: #a40000;
+      }
+      table {
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 0.35rem 0.5rem;
+      }
+      h2 {
+        margin-top: 0;
+        font-size: 1.1rem;
+      }

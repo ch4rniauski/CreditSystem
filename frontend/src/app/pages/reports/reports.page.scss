@@ -1,0 +1,30 @@
+      .panel {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #f7f7f7;
+        border-radius: 6px;
+      }
+      .form-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: flex-end;
+        margin-bottom: 0.75rem;
+      }
+      h2 {
+        font-size: 1.1rem;
+        margin-top: 0;
+      }
+      h3 {
+        font-size: 1rem;
+      }
+      table {
+        border-collapse: collapse;
+        margin-top: 0.5rem;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.85rem;
+      }

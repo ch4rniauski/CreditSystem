@@ -1,0 +1,182 @@
+    <h1>Кредитные продукты</h1>
+    <section class="panel">
+      <h2>Продукт</h2>
+      <form [formGroup]="productForm" (ngSubmit)="saveProduct()" class="form-grid">
+        <label>Название <input formControlName="name" /></label>
+        <label>Описание <input formControlName="description" /></label>
+        <label
+          >Тип клиента
+          <select formControlName="clientType">
+            <option value="legal">Юридическое лицо</option>
+            <option value="physical">Физическое лицо</option>
+          </select>
+        </label>
+        <label>Сумма мин <input type="number" formControlName="minAmount" /></label>
+        <label>Сумма макс <input type="number" formControlName="maxAmount" /></label>
+        <label>Срок мин (мес.) <input type="number" formControlName="minTermMonths" /></label>
+        <label>Срок макс (мес.) <input type="number" formControlName="maxTermMonths" /></label>
+        <button type="submit" [disabled]="productForm.invalid">
+          {{ selectedProductId() === null ? 'Создать' : 'Сохранить продукт' }}
+        </button>
+        @if (selectedProductId() !== null) {
+          <button type="button" (click)="clearProductSelection()">Снять выбор</button>
+        }
+      </form>
+    </section>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Тип клиента</th>
+          <th>Сумма</th>
+          <th>Срок (мес.)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of products(); track p.id) {
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.clientType === 'legal' ? 'ЮЛ' : 'ФЛ' }}</td>
+            <td>{{ p.minAmount }} — {{ p.maxAmount }}</td>
+            <td>{{ p.minTermMonths }} — {{ p.maxTermMonths }}</td>
+            <td>
+              <button type="button" (click)="selectProduct(p)">Настроить</button>
+              <button type="button" (click)="deleteProduct(p)">Удалить</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    @if (selectedProductId() !== null) {
+      <section class="panel">
+        <h2>Валюты продукта</h2>
+        <form [formGroup]="ccForm" (ngSubmit)="addCc()" class="form-inline">
+          <select formControlName="currencyId">
+            @for (c of currencies(); track c.id) {
+              <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
+            }
+          </select>
+          <label>Базовая ставка <input type="number" step="0.0001" formControlName="baseInterestRate" /></label>
+          <button type="submit" [disabled]="ccForm.invalid">Добавить валюту</button>
+        </form>
+        <table>
+          <thead>
+            <tr>
+              <th>Валюта</th>
+              <th>Базовая ставка</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of ccRows(); track row.currencyCode) {
+              <tr>
+                <td>{{ row.currencyCode }}</td>
+                <td>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    [value]="row.baseInterestRate"
+                    #br
+                    (change)="updateCc(row.currencyCode, br.value)"
+                  />
+                </td>
+                <td><button type="button" (click)="removeCc(row.currencyCode)">Удалить</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Процентные ставки (диапазоны сроков)</h2>
+        <form [formGroup]="rateForm" (ngSubmit)="addRate()" class="form-grid small">
+          <label>Валюта
+            <select formControlName="currencyId">
+              @for (c of linkedCurrencyOptions(); track c.id) {
+                <option [value]="c.id">{{ c.code }}</option>
+              }
+            </select>
+          </label>
+          <label>Срок от <input type="number" formControlName="termFromMonths" /></label>
+          <label>Срок до <input type="number" formControlName="termToMonths" /></label>
+          <label
+            >Тип
+            <select formControlName="rateType">
+              <option value="fixed">Фиксированная</option>
+              <option value="floating">Плавающая</option>
+            </select>
+          </label>
+          <label>Ставка (fixed) <input type="number" step="0.0001" formControlName="rateValue" /></label>
+          <label>Добавка (floating) <input type="number" step="0.0001" formControlName="additivePercent" /></label>
+          <label>С действия <input type="date" formControlName="validFrom" /></label>
+          <label>По <input type="date" formControlName="validTo" /></label>
+          <button type="submit" [disabled]="rateForm.invalid">Добавить</button>
+        </form>
+        <table>
+          <thead>
+            <tr>
+              <th>Валюта</th>
+              <th>Срок</th>
+              <th>Тип</th>
+              <th>Значение</th>
+              <th>Период</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rateRows(); track r.id) {
+              <tr>
+                <td>{{ r.currencyCode }}</td>
+                <td>{{ r.termFromMonths }}–{{ r.termToMonths }}</td>
+                <td>{{ r.rateType }}</td>
+                <td>
+                  {{ r.rateType === 'fixed' ? r.rateValue : r.additivePercent }}
+                </td>
+                <td>{{ r.validFrom }} {{ r.validTo ? '— ' + r.validTo : '' }}</td>
+                <td><button type="button" (click)="deleteRate(r)">Удалить</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Штрафы</h2>
+        <form [formGroup]="penForm" (ngSubmit)="addPenalty()" class="form-inline">
+          <select formControlName="penaltyType">
+            <option value="early_repayment">Досрочное (X)</option>
+            <option value="late_payment">Просрочка (Z)</option>
+          </select>
+          <label>% <input type="number" step="0.0001" formControlName="valuePercent" /></label>
+          <label>С <input type="date" formControlName="validFrom" /></label>
+          <button type="submit" [disabled]="penForm.invalid">Добавить</button>
+        </form>
+        <table>
+          <thead>
+            <tr>
+              <th>Тип</th>
+              <th>%</th>
+              <th>С даты</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of penRows(); track p.id) {
+              <tr>
+                <td>{{ p.penaltyType }}</td>
+                <td>{{ p.valuePercent }}</td>
+                <td>{{ p.validFrom }}</td>
+                <td><button type="button" (click)="deletePenalty(p)">Удалить</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }

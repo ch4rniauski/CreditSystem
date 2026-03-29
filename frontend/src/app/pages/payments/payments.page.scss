@@ -1,0 +1,13 @@
+      .block {
+        display: block;
+        margin-bottom: 1rem;
+      }
+      .form-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: flex-end;
+      }
+      .err {
+        color: #a40000;
+      }

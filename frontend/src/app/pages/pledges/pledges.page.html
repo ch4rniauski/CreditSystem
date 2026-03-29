@@ -1,0 +1,50 @@
+    <h1>Залог</h1>
+    <p class="hint">Редактирование только для договоров «Оформляется».</p>
+    <label class="block"
+      >Договор
+      <select [value]="selectedContractId()" (change)="pickContract(+$any($event.target).value)">
+        @for (c of draftContracts(); track c.id) {
+          <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }}</option>
+        }
+      </select>
+    </label>
+
+    <form [formGroup]="form" (ngSubmit)="add()" class="form-grid">
+      <label>Имущество <input formControlName="propertyName" /></label>
+      <label>Оценка <input type="number" formControlName="estimatedValue" /></label>
+      <label>Дата оценки <input type="date" formControlName="assessmentDate" /></label>
+      <label
+        >Тип
+        <select formControlName="propertyType">
+          <option value="real_estate">Недвижимость</option>
+          <option value="vehicle">Автотранспорт</option>
+          <option value="equipment">Оборудование</option>
+        </select>
+      </label>
+      <button type="submit" [disabled]="form.invalid || selectedContractId() === 0">Добавить</button>
+    </form>
+
+    @if (error()) {
+      <p class="err">{{ error() }}</p>
+    }
+
+    <table>
+      <thead>
+        <tr>
+          <th>Имущество</th>
+          <th>Стоимость</th>
+          <th>Тип</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of pledges(); track p.internalId) {
+          <tr>
+            <td>{{ p.propertyName }}</td>
+            <td>{{ p.estimatedValue }}</td>
+            <td>{{ p.propertyType }}</td>
+            <td><button type="button" (click)="remove(p)">Удалить</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
