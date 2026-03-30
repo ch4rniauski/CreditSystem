@@ -497,6 +497,8 @@ public partial class CreditSystemContext : DbContext
 
             entity.ToTable("refinance_rates");
 
+            entity.HasIndex(e => e.ValidFromDate, "refinance_rates_valid_from_date_key").IsUnique();
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.RatePercent)
                 .HasPrecision(5, 4)
