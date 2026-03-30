@@ -65,6 +65,10 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         }
         catch (DbUpdateException ex)
         {
+            if (ex.InnerException is NpgsqlException npg && npg.SqlState == "23505")
+            {
+                return Conflict("Валюта с таким кодом уже существует.");
+            }
             return Conflict(ex.InnerException?.Message ?? ex.Message);
         }
 
@@ -84,6 +88,10 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         }
         catch (DbUpdateException ex)
         {
+            if (ex.InnerException is NpgsqlException npg && npg.SqlState == "23505")
+            {
+                return Conflict("Валюта с таким кодом уже существует.");
+            }
             return Conflict(ex.InnerException?.Message ?? ex.Message);
         }
 
