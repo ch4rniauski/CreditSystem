@@ -22,6 +22,8 @@
         <thead>
           <tr>
             <th>Название</th>
+            <th>Форма собственности</th>
+            <th>Юр. адрес</th>
             <th>Телефон</th>
             <th>Действие</th>
           </tr>
@@ -30,6 +32,8 @@
           @for (r of legalRows(); track r.clientId) {
             <tr>
               <td>{{ r.name }}</td>
+              <td>{{ r.ownershipType }}</td>
+              <td>{{ r.legalAddress }}</td>
               <td>{{ r.phone ?? '—' }}</td>
               <td>
                 <button type="button" (click)="editLegal(r)">Изменить</button>
@@ -73,6 +77,8 @@
           <tr>
             <th>ФИО</th>
             <th>Паспорт</th>
+            <th>Адрес</th>
+            <th>Телефон</th>
             <th>Действие</th>
           </tr>
         </thead>
@@ -81,6 +87,8 @@
             <tr>
               <td>{{ r.fullName }}</td>
               <td>{{ r.passportSeries }} {{ r.passportNumber }}</td>
+              <td>{{ r.actualAddress ?? '—' }}</td>
+              <td>{{ r.phone ?? '—' }}</td>
               <td>
                 <button type="button" (click)="editPhys(r)">Изменить</button>
                 <button type="button" (click)="deleteClient(r.clientId, r.fullName)">Удалить</button>
