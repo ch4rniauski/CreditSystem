@@ -38,8 +38,9 @@ export default class CreditProductsPage implements OnInit {
     return this.currencies().filter((c) => codes.has(c.code));
   });
 
-  readonly isFixedRate = computed(() => this.rateForm.get('rateType')?.value === 'fixed');
-  readonly isFloatingRate = computed(() => this.rateForm.get('rateType')?.value === 'floating');
+  readonly rateType = signal<'fixed' | 'floating'>('fixed');
+  readonly isFixedRate = computed(() => this.rateType() === 'fixed');
+  readonly isFloatingRate = computed(() => this.rateType() === 'floating');
 
   readonly productForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -82,9 +83,12 @@ export default class CreditProductsPage implements OnInit {
       this.rateForm.patchValue({ currencyId: first });
     });
 
-    // Слушатель для очистки невалидных полей при смене типа ставки
-    this.rateForm.get('rateType')?.valueChanges.subscribe(() => {
-      if (this.isFixedRate()) {
+    // Синхронизируем сигнал с полем rateType и чистим неактуальные поля
+    this.rateForm.get('rateType')?.valueChanges.subscribe((value) => {
+      const type = value === 'floating' ? 'floating' : 'fixed';
+      this.rateType.set(type);
+
+      if (type === 'fixed') {
         this.rateForm.patchValue({ additivePercent: null }, { emitEvent: false });
       } else {
         this.rateForm.patchValue({ rateValue: null }, { emitEvent: false });

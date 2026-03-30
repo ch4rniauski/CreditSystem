@@ -13,8 +13,8 @@
         </label>
         <label>Сумма мин <input type="number" formControlName="minAmount" /></label>
         <label>Сумма макс <input type="number" formControlName="maxAmount" /></label>
-        <label>Срок мин (мес.) <input type="number" formControlName="minTermMonths" /></label>
-        <label>Срок макс (мес.) <input type="number" formControlName="maxTermMonths" /></label>
+        <label>Мин срок кредита (мес.) <input type="number" formControlName="minTermMonths" /></label>
+        <label>Макс срок кредита (мес.) <input type="number" formControlName="maxTermMonths" /></label>
         <button type="submit" [disabled]="productForm.invalid">
           {{ selectedProductId() === null ? 'Создать' : 'Сохранить продукт' }}
         </button>
@@ -38,7 +38,7 @@
         @for (p of products(); track p.id) {
           <tr>
             <td>{{ p.name }}</td>
-            <td>{{ p.clientType === 'legal' ? 'ЮЛ' : 'ФЛ' }}</td>
+            <td>{{ p.clientType === 'legal' ? 'Юр лицо' : 'Физ лицо' }}</td>
             <td>{{ p.minAmount }} — {{ p.maxAmount }}</td>
             <td>{{ p.minTermMonths }} — {{ p.maxTermMonths }}</td>
             <td>
@@ -109,8 +109,12 @@
               <option value="floating">Плавающая</option>
             </select>
           </label>
-          <label>Ставка % <input type="number" step="0.0001" placeholder="0.0000" [required]="isFixedRate()" [disabled]="!isFixedRate()" formControlName="rateValue" /></label>
-          <label>Добавка % <input type="number" step="0.0001" placeholder="0.0000" [required]="isFloatingRate()" [disabled]="!isFloatingRate()" formControlName="additivePercent" /></label>
+          @if (isFixedRate()) {
+            <label>Ставка % <input type="number" step="0.0001" placeholder="0.0000" required formControlName="rateValue" /></label>
+          }
+          @if (isFloatingRate()) {
+            <label>Добавка % <input type="number" step="0.0001" placeholder="0.0000" required formControlName="additivePercent" /></label>
+          }
           <label>С действия <input type="date" formControlName="validFrom" /></label>
           <label>По <input type="date" formControlName="validTo" /></label>
           <button type="submit" [disabled]="rateForm.invalid">Добавить</button>
