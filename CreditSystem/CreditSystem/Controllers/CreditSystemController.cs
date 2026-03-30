@@ -129,6 +129,18 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<int>> CreateRefinanceRate([FromBody] RefinanceRateWriteDto dto,
         CancellationToken ct)
     {
+        // Проверка 1: нельзя создавать ставку с одинаковой ValidFromDate
+        if (await db.RefinanceRates.AsNoTracking().AnyAsync(r => r.ValidFromDate == dto.ValidFromDate, ct))
+            return Conflict("Ставка с такой датой начала уже существует.");
+
+        // Проверка 2: нельзя создавать ставку, у которой ValidFrom попадает на период другой ставки
+        // (которая имеет как ValidFrom, так и ValidTo)
+        if (await db.RefinanceRates.AsNoTracking().AnyAsync(r =>
+                r.ValidFromDate <= dto.ValidFromDate &&
+                r.ValidToDate != null &&
+                r.ValidToDate >= dto.ValidFromDate, ct))
+            return Conflict("Новая ставка пересекается с существующей ставкой, у которой указана дата окончания.");
+
         var e = new RefinanceRate
         {
             ValidFromDate = dto.ValidFromDate,
@@ -136,7 +148,19 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             RatePercent = dto.RatePercent
         };
         db.RefinanceRates.Add(e);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            if (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
+            {
+                return Conflict("Ставка с такой датой начала уже существует.");
+            }
+            return Conflict("Ошибка при создании ставки: " + FmtDb(ex));
+        }
+
         return Ok(e.Id);
     }
 

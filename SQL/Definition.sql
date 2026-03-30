@@ -111,7 +111,7 @@ REFERENCES credit_currencies(credit_id, currency_id);
 
 CREATE TABLE refinance_rates (
     id SERIAL PRIMARY KEY,
-    valid_from_date DATE NOT NULL,
+    valid_from_date DATE NOT NULL UNIQUE,
     valid_to_date DATE,
     rate_percent DECIMAL(5,4) NOT NULL
 );
@@ -119,6 +119,10 @@ CREATE TABLE refinance_rates (
 ALTER TABLE refinance_rates 
 ADD CONSTRAINT chk_refinance_rates_rate 
 CHECK (rate_percent >= 0);
+
+ALTER TABLE refinance_rates
+ADD CONSTRAINT chk_refinance_rates_date_order
+CHECK (valid_to_date IS NULL OR valid_to_date >= valid_from_date);
 
 CREATE TABLE penalties (
     id SERIAL PRIMARY KEY,

@@ -46,9 +46,25 @@ export default class RefinancePage implements OnInit {
       .subscribe({
         next: () => {
           this.form.reset({ ratePercent: 0 });
+          this.error.set(null);
           this.reload();
         },
-        error: (e) => this.error.set(e.error ?? 'Ошибка'),
+        error: (e) => {
+          let errorMsg = 'Ошибка при создании ставки';
+          if (e.error) {
+            // Если error — строка (plain text)
+            if (typeof e.error === 'string') {
+              errorMsg = e.error;
+            }
+            // Если error — объект с текстом
+            else if (e.error.message) {
+              errorMsg = e.error.message;
+            }
+          } else if (e.message) {
+            errorMsg = e.message;
+          }
+          this.error.set(errorMsg);
+        },
       });
   }
 }

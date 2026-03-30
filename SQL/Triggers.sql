@@ -97,3 +97,27 @@ CREATE TRIGGER trg_check_guarantor
 BEFORE INSERT ON guarantors
 FOR EACH ROW
 EXECUTE FUNCTION check_guarantor_allowed();
+
+
+
+CREATE OR REPLACE FUNCTION check_refinance_rate_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM refinance_rates
+        WHERE id != COALESCE(NEW.id, 0)
+        AND valid_from_date <= NEW.valid_from_date
+        AND valid_to_date IS NOT NULL
+        AND valid_to_date >= NEW.valid_from_date
+    ) THEN
+        RAISE EXCEPTION 'Новая ставка пересекается с существующей ставкой, у которой указана дата окончания';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_refinance_overlap
+BEFORE INSERT OR UPDATE ON refinance_rates
+FOR EACH ROW
+EXECUTE FUNCTION check_refinance_rate_overlap();
