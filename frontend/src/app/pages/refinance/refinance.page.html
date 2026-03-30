@@ -21,8 +21,8 @@
       <tbody>
         @for (r of rows(); track r.id) {
           <tr>
-            <td>{{ r.validFromDate }}</td>
-            <td>{{ r.validToDate ?? '—' }}</td>
+            <td>{{ r.validFromDate | date: 'dd.MM.yyyy' }}</td>
+            <td>{{ r.validToDate ? (r.validToDate | date: 'dd.MM.yyyy') : '—' }}</td>
             <td>{{ r.ratePercent }}</td>
           </tr>
         }

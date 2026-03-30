@@ -135,7 +135,10 @@
                 <td>
                   {{ r.rateType === 'fixed' ? r.rateValue : r.additivePercent }}
                 </td>
-                <td>{{ r.validFrom }} {{ r.validTo ? '— ' + r.validTo : '' }}</td>
+                <td>
+                  {{ r.validFrom | date: 'dd.MM.yyyy' }}
+                  {{ r.validTo ? '— ' + (r.validTo | date: 'dd.MM.yyyy') : '' }}
+                </td>
                 <td><button type="button" (click)="deleteRate(r)">Удалить</button></td>
               </tr>
             }
@@ -168,7 +171,7 @@
               <tr>
                 <td>{{ p.penaltyType }}</td>
                 <td>{{ p.valuePercent }}</td>
-                <td>{{ p.validFrom }}</td>
+                <td>{{ p.validFrom | date: 'dd.MM.yyyy' }}</td>
                 <td><button type="button" (click)="deletePenalty(p)">Удалить</button></td>
               </tr>
             }

@@ -83,7 +83,7 @@
           <tbody>
             @for (l of calendar(); track l.plannedDate) {
               <tr>
-                <td>{{ l.plannedDate }}</td>
+                <td>{{ l.plannedDate | date: 'dd.MM.yyyy' }}</td>
                 <td>{{ l.expectedPayment | number: '1.2-2' }}</td>
                 <td>{{ l.expectedPrincipal | number: '1.2-2' }}</td>
                 <td>{{ l.expectedInterest | number: '1.2-2' }}</td>
@@ -122,7 +122,7 @@
           <tbody>
             @for (h of history(); track $index) {
               <tr>
-                <td>{{ h.changeDate | date: 'short' }}</td>
+                <td>{{ h.changeDate | date: 'dd.MM.yyyy' }}</td>
                 <td>{{ h.kind }}</td>
                 <td>{{ h.currencyCode ?? '—' }}</td>
                 <td>{{ h.oldValuePercent }}</td>
