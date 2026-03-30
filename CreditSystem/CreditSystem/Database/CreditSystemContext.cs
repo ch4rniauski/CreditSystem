@@ -501,7 +501,7 @@ public partial class CreditSystemContext : DbContext
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.RatePercent)
-                .HasPrecision(5, 4)
+                .HasPrecision(5, 2)
                 .HasColumnName("rate_percent");
             entity.Property(e => e.ValidFromDate).HasColumnName("valid_from_date");
             entity.Property(e => e.ValidToDate).HasColumnName("valid_to_date");

@@ -113,7 +113,7 @@ CREATE TABLE refinance_rates (
     id SERIAL PRIMARY KEY,
     valid_from_date DATE NOT NULL UNIQUE,
     valid_to_date DATE,
-    rate_percent DECIMAL(5,4) NOT NULL
+    rate_percent DECIMAL(5,2) NOT NULL
 );
 
 ALTER TABLE refinance_rates 
