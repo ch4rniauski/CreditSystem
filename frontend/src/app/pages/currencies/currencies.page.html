@@ -1,15 +1,17 @@
     <h1>Валюты</h1>
-    <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
-      <label>Код <input formControlName="code" /></label>
-      <label>Название <input formControlName="name" /></label>
-      <button type="submit" [disabled]="form.invalid">{{ editingId() === null ? 'Добавить' : 'Сохранить' }}</button>
-      @if (editingId() !== null) {
-        <button type="button" (click)="cancelEdit()">Отмена</button>
+    <section class="panel">
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+        <label>Код <input formControlName="code" /></label>
+        <label>Название <input formControlName="name" /></label>
+        <button type="submit" [disabled]="form.invalid">{{ editingId() === null ? 'Добавить' : 'Сохранить' }}</button>
+        @if (editingId() !== null) {
+          <button type="button" (click)="cancelEdit()">Отмена</button>
+        }
+      </form>
+      @if (error()) {
+        <p class="err">{{ error() }}</p>
       }
-    </form>
-    @if (error()) {
-      <p class="err">{{ error() }}</p>
-    }
+    </section>
     <table>
       <thead>
         <tr>
