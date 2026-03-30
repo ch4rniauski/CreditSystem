@@ -2,7 +2,7 @@
     <section class="panel">
       <label class="block"
         >Договор (оформлен)
-        <select [value]="contractId()" (change)="setContract(+$any($event.target).value)">
+        <select [value]="contractId()" (change)="setContract(+ $any($event.target).value)">
           @for (c of signedContracts(); track c.id) {
             <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }} (остаток {{ c.remainingPrincipal }})</option>
           }
@@ -19,3 +19,5 @@
         <p class="err">{{ error() }}</p>
       }
     </section>
+
+
