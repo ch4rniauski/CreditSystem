@@ -210,11 +210,9 @@ export interface CreditProductWriteDto {
 }
 export interface CreditCurrencyRow {
   currencyCode: string;
-  baseInterestRate: number;
 }
 export interface CreditCurrencyWriteDto {
   currencyId: number;
-  baseInterestRate: number;
 }
 export interface InterestRateRow {
   id: number;

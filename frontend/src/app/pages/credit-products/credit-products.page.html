@@ -59,14 +59,12 @@
               <option [value]="c.id">{{ c.code }} — {{ c.name }}</option>
             }
           </select>
-          <label>Базовая ставка <input type="number" step="0.0001" formControlName="baseInterestRate" /></label>
           <button type="submit" [disabled]="ccForm.invalid">Добавить валюту</button>
         </form>
         <table>
           <thead>
             <tr>
               <th>Валюта</th>
-              <th>Базовая ставка</th>
               <th>Действие</th>
             </tr>
           </thead>
@@ -74,15 +72,6 @@
             @for (row of ccRows(); track row.currencyCode) {
               <tr>
                 <td>{{ row.currencyCode }}</td>
-                <td>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    [value]="row.baseInterestRate"
-                    #br
-                    (change)="updateCc(row.currencyCode, br.value)"
-                  />
-                </td>
                 <td><button type="button" (click)="removeCc(row.currencyCode)">Удалить</button></td>
               </tr>
             }

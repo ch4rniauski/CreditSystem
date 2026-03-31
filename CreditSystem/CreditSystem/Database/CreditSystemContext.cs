@@ -156,9 +156,6 @@ public partial class CreditSystemContext : DbContext
 
             entity.Property(e => e.CreditId).HasColumnName("credit_id");
             entity.Property(e => e.CurrencyId).HasColumnName("currency_id");
-            entity.Property(e => e.BaseInterestRate)
-                .HasPrecision(5, 4)
-                .HasColumnName("base_interest_rate");
 
             entity.HasOne(d => d.Credit).WithMany(p => p.CreditCurrencies)
                 .HasForeignKey(d => d.CreditId)

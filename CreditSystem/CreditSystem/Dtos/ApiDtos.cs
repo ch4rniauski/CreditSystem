@@ -23,9 +23,9 @@ public record CreditProductWriteDto(
     int MinTermMonths,
     int MaxTermMonths);
 
-public record CreditCurrencyRow(string CurrencyCode, decimal BaseInterestRate);
+public record CreditCurrencyRow(string CurrencyCode);
 
-public record CreditCurrencyWriteDto(int CurrencyId, decimal BaseInterestRate);
+public record CreditCurrencyWriteDto(int CurrencyId);
 
 public record InterestRateRow(
     int Id,

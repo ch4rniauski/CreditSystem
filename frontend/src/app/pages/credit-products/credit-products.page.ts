@@ -54,7 +54,6 @@ export default class CreditProductsPage implements OnInit {
 
   readonly ccForm = this.fb.nonNullable.group({
     currencyId: [0, Validators.min(1)],
-    baseInterestRate: [0, [Validators.required, Validators.min(0), positiveDecimalValidator()]],
   });
 
   readonly rateForm = this.fb.nonNullable.group({
@@ -192,15 +191,8 @@ export default class CreditProductsPage implements OnInit {
     });
   }
 
-  updateCc(currencyCode: string, base: string) {
-    const pid = this.selectedProductId();
-    const cid = this.currencyIdByCode(currencyCode);
-    if (pid === null || cid === null) return;
-    const baseInterestRate = Number(base);
-    this.api.updateCreditCurrency(pid, cid, { currencyId: cid, baseInterestRate }).subscribe({
-      next: () => this.reloadDetails(),
-      error: (e) => this.error.set(e.error ?? 'Ошибка'),
-    });
+  updateCc(currencyCode: string) {
+    // больше не редактируем базовую ставку, только удалять валютах продукта
   }
 
   removeCc(currencyCode: string) {

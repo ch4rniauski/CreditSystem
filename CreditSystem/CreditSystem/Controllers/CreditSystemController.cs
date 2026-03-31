@@ -242,7 +242,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var list = await db.CreditCurrencies.AsNoTracking()
             .Where(cc => cc.CreditId == creditId)
             .Join(db.Currencies.AsNoTracking(), cc => cc.CurrencyId, cu => cu.Id,
-                (cc, cu) => new CreditCurrencyRow(cu.Code, cc.BaseInterestRate))
+                (cc, cu) => new CreditCurrencyRow(cu.Code))
             .ToListAsync(ct);
         return Ok(list);
     }
@@ -262,7 +262,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         {
             CreditId = creditId,
             CurrencyId = dto.CurrencyId,
-            BaseInterestRate = dto.BaseInterestRate
         });
         await db.SaveChangesAsync(ct);
         return NoContent();
@@ -275,7 +274,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (dto.CurrencyId != currencyId) return BadRequest();
         var cc = await db.CreditCurrencies.FindAsync([creditId, currencyId], ct);
         if (cc == null) return NotFound();
-        cc.BaseInterestRate = dto.BaseInterestRate;
+        // Базовая ставка удалена, здесь больше нет полей для обновления.
         await db.SaveChangesAsync(ct);
         return NoContent();
     }

@@ -64,13 +64,8 @@ CREATE TABLE currencies (
 CREATE TABLE credit_currencies (
     credit_id INTEGER REFERENCES credits(id),
     currency_id INTEGER REFERENCES currencies(id),
-    base_interest_rate DECIMAL(5,4) NOT NULL,
     PRIMARY KEY (credit_id, currency_id)
 );
-
-ALTER TABLE credit_currencies 
-ADD CONSTRAINT chk_credit_currencies_base_rate 
-CHECK (base_interest_rate >= 0);
 
 CREATE TABLE interest_rates (
     id SERIAL PRIMARY KEY,

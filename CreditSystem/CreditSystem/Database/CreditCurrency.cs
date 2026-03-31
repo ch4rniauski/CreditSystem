@@ -6,8 +6,6 @@ public partial class CreditCurrency
 
     public int CurrencyId { get; set; }
 
-    public decimal BaseInterestRate { get; set; }
-
     public virtual Credit Credit { get; set; } = null!;
 
     public virtual Currency Currency { get; set; } = null!;
