@@ -93,6 +93,18 @@ ADD CONSTRAINT chk_interest_rates_rate_type
 CHECK (rate_type IN ('fixed', 'floating'));
 
 ALTER TABLE interest_rates 
+ADD CONSTRAINT chk_interest_rates_rate_value_non_negative 
+CHECK (rate_value IS NULL OR rate_value >= 0);
+
+ALTER TABLE interest_rates 
+ADD CONSTRAINT chk_interest_rates_additive_percent_non_negative 
+CHECK (additive_percent IS NULL OR additive_percent >= 0);
+
+ALTER TABLE interest_rates 
+ADD CONSTRAINT chk_interest_rates_date_order
+CHECK (valid_to IS NULL OR valid_from <= valid_to);
+
+ALTER TABLE interest_rates 
 ADD CONSTRAINT chk_interest_rates_rate_rules 
 CHECK (
     (rate_type = 'fixed' AND rate_value IS NOT NULL AND additive_percent IS NULL) OR

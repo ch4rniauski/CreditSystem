@@ -194,7 +194,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             MaxTermMonths = dto.MaxTermMonths
         };
         db.Credits.Add(c);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return Ok(c.Id);
     }
 
@@ -211,7 +221,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         c.MaxAmount = dto.MaxAmount;
         c.MinTermMonths = dto.MinTermMonths;
         c.MaxTermMonths = dto.MaxTermMonths;
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return NoContent();
     }
 
@@ -257,13 +277,23 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var exists =
             await db.CreditCurrencies.AsNoTracking().AnyAsync(cc =>
                 cc.CreditId == creditId && cc.CurrencyId == dto.CurrencyId, ct);
-        if (exists) return Conflict("Пара уже существует.");
+        if (exists) return Conflict(new { error = "Пара уже существует.", section = "currencies" });
         db.CreditCurrencies.Add(new CreditCurrency
         {
             CreditId = creditId,
             CurrencyId = dto.CurrencyId,
         });
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return NoContent();
     }
 
@@ -346,7 +376,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             ValidTo = dto.ValidTo
         };
         db.InterestRates.Add(e);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return Ok(e.Id);
     }
 
@@ -399,7 +439,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         e.ValidFrom = dto.ValidFrom;
         e.ValidTo = dto.ValidTo;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return NoContent();
     }
 
@@ -436,7 +486,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             ValidFrom = dto.ValidFrom
         };
         db.Penalties.Add(e);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            throw;
+        }
         return Ok(e.Id);
     }
 

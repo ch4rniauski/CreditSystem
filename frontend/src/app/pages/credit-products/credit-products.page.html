@@ -22,6 +22,9 @@
           <button type="button" (click)="clearProductSelection()">Снять выбор</button>
         }
       </form>
+      @if (productError()) {
+        <p class="err">{{ productError() }}</p>
+      }
     </section>
 
     <table>
@@ -61,6 +64,9 @@
           </select>
           <button type="submit" [disabled]="ccForm.invalid">Добавить валюту</button>
         </form>
+        @if (currenciesError()) {
+          <p class="err">{{ currenciesError() }}</p>
+        }
         <table>
           <thead>
             <tr>
@@ -108,6 +114,9 @@
           <label>По <input type="date" formControlName="validTo" /></label>
           <button type="submit" [disabled]="rateForm.invalid">Добавить</button>
         </form>
+        @if (interestRatesError()) {
+          <p class="err">{{ interestRatesError() }}</p>
+        }
         <table>
           <thead>
             <tr>
@@ -150,6 +159,9 @@
           <label>С <input type="date" formControlName="validFrom" /></label>
           <button type="submit" [disabled]="penForm.invalid">Добавить</button>
         </form>
+        @if (penaltiesError()) {
+          <p class="err">{{ penaltiesError() }}</p>
+        }
         <table>
           <thead>
             <tr>

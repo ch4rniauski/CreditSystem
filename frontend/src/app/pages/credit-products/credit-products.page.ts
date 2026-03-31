@@ -12,7 +12,7 @@ import {
   PenaltyRow,
   PenaltyWriteDto,
 } from '../../core/api.service';
-import { positiveDecimalValidator } from '../../core/validators';
+import { positiveDecimalValidator, nonNegativeValidator } from '../../core/validators';
 
 @Component({
   selector: 'app-credit-products',
@@ -31,6 +31,12 @@ export default class CreditProductsPage implements OnInit {
   readonly ccRows = signal<CreditCurrencyRow[]>([]);
   readonly rateRows = signal<InterestRateRow[]>([]);
   readonly penRows = signal<PenaltyRow[]>([]);
+  
+  // Section-specific errors
+  readonly productError = signal<string | null>(null);
+  readonly currenciesError = signal<string | null>(null);
+  readonly interestRatesError = signal<string | null>(null);
+  readonly penaltiesError = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly linkedCurrencyOptions = computed(() => {
@@ -46,10 +52,10 @@ export default class CreditProductsPage implements OnInit {
     name: ['', Validators.required],
     description: [''],
     clientType: ['legal', Validators.required],
-    minAmount: [1, [Validators.required, Validators.min(0.01)]],
-    maxAmount: [1_000_000, Validators.required],
+    minAmount: [1, [Validators.required, Validators.min(0.01), nonNegativeValidator()]],
+    maxAmount: [1_000_000, [Validators.required, nonNegativeValidator()]],
     minTermMonths: [1, [Validators.required, Validators.min(1)]],
-    maxTermMonths: [120, Validators.required],
+    maxTermMonths: [120, [Validators.required, Validators.min(1)]],
   });
 
   readonly ccForm = this.fb.nonNullable.group({
@@ -58,18 +64,18 @@ export default class CreditProductsPage implements OnInit {
 
   readonly rateForm = this.fb.nonNullable.group({
     currencyId: [0, Validators.min(1)],
-    termFromMonths: [1, Validators.min(1)],
-    termToMonths: [12, Validators.min(1)],
+    termFromMonths: [1, [Validators.required, Validators.min(1)]],
+    termToMonths: [12, [Validators.required, Validators.min(1)]],
     rateType: ['fixed', Validators.required],
-    rateValue: [null as number | null],
-    additivePercent: [null as number | null],
+    rateValue: [null as number | null, nonNegativeValidator()],
+    additivePercent: [null as number | null, nonNegativeValidator()],
     validFrom: ['', Validators.required],
     validTo: [''],
   });
 
   readonly penForm = this.fb.nonNullable.group({
     penaltyType: ['early_repayment', Validators.required],
-    valuePercent: [0, [Validators.required, Validators.min(0), positiveDecimalValidator()]],
+    valuePercent: [0, [Validators.required, Validators.min(0), nonNegativeValidator()]],
     validFrom: ['', Validators.required],
   });
 
@@ -130,6 +136,15 @@ export default class CreditProductsPage implements OnInit {
     this.ccRows.set([]);
     this.rateRows.set([]);
     this.penRows.set([]);
+    this.clearErrors();
+  }
+
+  clearErrors() {
+    this.productError.set(null);
+    this.currenciesError.set(null);
+    this.interestRatesError.set(null);
+    this.penaltiesError.set(null);
+    this.error.set(null);
   }
 
   reloadDetails() {
@@ -148,17 +163,24 @@ export default class CreditProductsPage implements OnInit {
       this.api.createCreditProduct(v).subscribe({
         next: () => {
           this.reloadProducts();
-          this.error.set(null);
+          this.productError.set(null);
         },
-        error: (e) => this.error.set(e.error ?? 'Ошибка'),
+        error: (e) => {
+          const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
+          this.productError.set(errorMessage ?? 'Ошибка');
+        },
       });
     } else {
       this.api.updateCreditProduct(id, v).subscribe({
         next: () => {
           this.reloadProducts();
           this.reloadDetails();
+          this.productError.set(null);
         },
-        error: (e) => this.error.set(e.error ?? 'Ошибка'),
+        error: (e) => {
+          const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
+          this.productError.set(errorMessage ?? 'Ошибка');
+        },
       });
     }
   }
@@ -185,9 +207,12 @@ export default class CreditProductsPage implements OnInit {
     this.api.addCreditCurrency(pid, v).subscribe({
       next: () => {
         this.reloadDetails();
-        this.error.set(null);
+        this.currenciesError.set(null);
       },
-      error: (e) => this.error.set(e.error ?? 'Ошибка'),
+      error: (e) => {
+        const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
+        this.currenciesError.set(errorMessage ?? 'Ошибка');
+      },
     });
   }
 
@@ -209,6 +234,18 @@ export default class CreditProductsPage implements OnInit {
     const pid = this.selectedProductId();
     if (pid === null || this.rateForm.invalid) return;
     const v = this.rateForm.getRawValue();
+
+    // Validate term range
+    if (v.termFromMonths > v.termToMonths) {
+      this.interestRatesError.set('Срок "от" не может быть больше срока "до"');
+      return;
+    }
+
+    // Validate date range
+    if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) {
+      this.interestRatesError.set('Дата начала не может быть позже даты окончания');
+      return;
+    }
 
     const body: InterestRateWriteDto = {
       creditId: pid,
@@ -234,9 +271,12 @@ export default class CreditProductsPage implements OnInit {
           validTo: '',
         });
         this.reloadDetails();
-        this.error.set(null);
+        this.interestRatesError.set(null);
       },
-      error: (e) => this.error.set(e.error?.title ?? e.error ?? 'Ошибка'),
+      error: (e) => {
+        const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
+        this.interestRatesError.set(errorMessage ?? 'Ошибка');
+      },
     });
   }
 
@@ -258,8 +298,14 @@ export default class CreditProductsPage implements OnInit {
       validFrom: v.validFrom,
     };
     this.api.createPenalty(body).subscribe({
-      next: () => this.reloadDetails(),
-      error: (e) => this.error.set(e.error ?? 'Ошибка'),
+      next: () => {
+        this.reloadDetails();
+        this.penaltiesError.set(null);
+      },
+      error: (e) => {
+        const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
+        this.penaltiesError.set(errorMessage ?? 'Ошибка');
+      },
     });
   }
 

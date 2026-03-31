@@ -1,4 +1,4 @@
-import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { AbstractControl, ValidationErrors, ValidatorFn, FormGroup } from '@angular/forms';
 
 /** Валидатор: только digits и + в начале */
 export function phoneValidator(): ValidatorFn {
@@ -67,6 +67,46 @@ export function positiveIntValidator(): ValidatorFn {
     const value = Number(control.value);
     if (!Number.isInteger(value) || value <= 0) {
       return { invalidPositiveInt: true };
+    }
+    return null;
+  };
+}
+
+/** Валидатор: неотрицательные числа (0 и больше) */
+export function nonNegativeValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (control.value === null || control.value === '') return null;
+    const value = Number(control.value);
+    if (isNaN(value) || value < 0) {
+      return { negative: true };
+    }
+    return null;
+  };
+}
+
+/** Валидатор для диапазона (from <= to) */
+export function rangeValidatorFor(toFieldName: string): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!(control instanceof FormGroup)) return null;
+    const fromValue = control.get(Object.keys(control.value)[0])?.value;
+    const toValue = control.get(toFieldName)?.value;
+    if (fromValue === null || toValue === null || fromValue === '' || toValue === '') return null;
+    if (Number(fromValue) > Number(toValue)) {
+      return { rangeInvalid: true };
+    }
+    return null;
+  };
+}
+
+/** Валидатор для диапазона дат (from <= to) */
+export function dateRangeValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!(control instanceof FormGroup)) return null;
+    const fromValue = control.get('validFrom')?.value;
+    const toValue = control.get('validTo')?.value;
+    if (!fromValue || !toValue) return null;
+    if (new Date(fromValue) > new Date(toValue)) {
+      return { dateRangeInvalid: true };
     }
     return null;
   };
