@@ -56,10 +56,14 @@ export default class CreditProductsPage implements OnInit {
     if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) return false;
 
     if (v.rateType === 'fixed') {
-      return v.rateValue !== null && Number(v.rateValue) >= 0;
+      return v.rateValue !== null && Number(v.rateValue) >= 0 && Number(v.rateValue) <= 9.9999;
     }
 
-    return v.additivePercent !== null && Number(v.additivePercent) >= 0;
+    return (
+      v.additivePercent !== null
+      && Number(v.additivePercent) >= 0
+      && Number(v.additivePercent) <= 9.9999
+    );
   }
 
   readonly productForm = this.fb.nonNullable.group({
@@ -124,10 +128,10 @@ export default class CreditProductsPage implements OnInit {
     const additiveCtrl = this.rateForm.get('additivePercent');
 
     if (type === 'fixed') {
-      rateValueCtrl?.setValidators([Validators.required, nonNegativeValidator()]);
+      rateValueCtrl?.setValidators([Validators.required, nonNegativeValidator(), Validators.max(9.9999)]);
       additiveCtrl?.setValidators([]);
     } else {
-      additiveCtrl?.setValidators([Validators.required, nonNegativeValidator()]);
+      additiveCtrl?.setValidators([Validators.required, nonNegativeValidator(), Validators.max(9.9999)]);
       rateValueCtrl?.setValidators([]);
     }
 

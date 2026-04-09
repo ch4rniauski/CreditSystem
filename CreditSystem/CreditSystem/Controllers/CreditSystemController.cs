@@ -351,6 +351,20 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             return BadRequest("Неверный тип ставки");
         }
 
+        var duplicateExists = await db.InterestRates.AsNoTracking().AnyAsync(r =>
+            r.CreditId == dto.CreditId
+            && r.CurrencyId == dto.CurrencyId
+            && r.TermFromMonths == dto.TermFromMonths
+            && r.TermToMonths == dto.TermToMonths
+            && r.RateType == dto.RateType
+            && r.RateValue == rateValue
+            && r.AdditivePercent == additivePercent
+            && r.ValidFrom == dto.ValidFrom
+            && r.ValidTo == dto.ValidTo,
+            ct);
+        if (duplicateExists)
+            return Conflict(new { error = "Такая процентная ставка уже существует.", section = "interestRates" });
+
         var e = new InterestRate
         {
             CreditId = dto.CreditId,
@@ -373,7 +387,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
             if (message != null)
                 return BadRequest(new { error = message, section });
-            throw;
+            return BadRequest(new { error = "Ошибка при сохранении процентной ставки.", section = "interestRates" });
         }
         return Ok(e.Id);
     }
@@ -436,7 +450,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
             if (message != null)
                 return BadRequest(new { error = message, section });
-            throw;
+            return BadRequest(new { error = "Ошибка при обновлении процентной ставки.", section = "interestRates" });
         }
         return NoContent();
     }

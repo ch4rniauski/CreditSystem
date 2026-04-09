@@ -16,7 +16,7 @@ public static class ConstraintErrorHandler
         if (ex.InnerException is not PostgresException pgEx)
             return (false, null, null);
 
-        if (pgEx.SqlState != "23514" && pgEx.SqlState != "23505") // CHECK and UNIQUE constraint codes
+        if (pgEx.SqlState != "23514" && pgEx.SqlState != "23505" && pgEx.SqlState != "22003") // CHECK, UNIQUE, NUMERIC_VALUE_OUT_OF_RANGE
             return (false, null, null);
 
         var constraintName = pgEx.ConstraintName ?? "";
@@ -75,6 +75,17 @@ public static class ConstraintErrorHandler
         // Penalty constraint errors
         if (constraintName == "chk_penalties_value")
             return (true, "Штраф не может быть отрицательным", "penalties");
+
+        if (pgEx.SqlState == "22003")
+        {
+            if (pgEx.TableName == "interest_rates")
+                return (true, "Значение ставки слишком большое. Допустимый диапазон: от 0 до 9.9999.", "interestRates");
+            if (pgEx.TableName == "refinance_rates")
+                return (true, "Значение ставки рефинансирования слишком большое.", "refinance");
+            if (pgEx.TableName == "penalties")
+                return (true, "Значение штрафа слишком большое.", "penalties");
+            return (true, "Числовое значение выходит за допустимый диапазон.", null);
+        }
 
         return (false, null, null);
     }
