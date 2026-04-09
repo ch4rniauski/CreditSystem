@@ -174,7 +174,7 @@
           <tbody>
             @for (p of penRows(); track p.id) {
               <tr>
-                <td>{{ p.penaltyType }}</td>
+                <td>{{ penaltyTypeLabel(p.penaltyType) }}</td>
                 <td>{{ p.valuePercent }}</td>
                 <td>{{ p.validFrom | date: 'dd.MM.yyyy' }}</td>
                 <td><button type="button" (click)="deletePenalty(p)">Удалить</button></td>

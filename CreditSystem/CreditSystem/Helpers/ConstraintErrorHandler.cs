@@ -70,11 +70,15 @@ public static class ConstraintErrorHandler
                 return (true, "Пара валюта-продукт уже существует", "currencies");
             if (constraintName == "refinance_rates_valid_from_date_key")
                 return (true, "Ставка с такой датой начала уже существует", "refinance");
+            if (constraintName == "uq_penalties_credit_type_valid_from")
+                return (true, "На одну и ту же дату уже существует штраф такого типа", "penalties");
         }
 
         // Penalty constraint errors
         if (constraintName == "chk_penalties_value")
             return (true, "Штраф не может быть отрицательным", "penalties");
+        if (constraintName == "chk_penalties_chronological_order")
+            return (true, "Новый штраф должен иметь дату не раньше существующих штрафов", "penalties");
 
         if (pgEx.SqlState == "22003")
         {

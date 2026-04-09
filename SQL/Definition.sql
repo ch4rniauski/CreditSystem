@@ -147,6 +147,10 @@ ALTER TABLE penalties
 ADD CONSTRAINT chk_penalties_value 
 CHECK (value_percent >= 0);
 
+ALTER TABLE penalties
+ADD CONSTRAINT uq_penalties_credit_type_valid_from
+UNIQUE (penalty_type, valid_from);
+
 CREATE TABLE contracts (
     id SERIAL PRIMARY KEY,
     client_id INTEGER REFERENCES clients(id),

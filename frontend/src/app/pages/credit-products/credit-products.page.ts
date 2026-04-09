@@ -329,6 +329,12 @@ export default class CreditProductsPage implements OnInit {
     });
   }
 
+  penaltyTypeLabel(type: string): string {
+    if (type === 'early_repayment') return 'Досрочное (X)';
+    if (type === 'late_payment') return 'Просрочка (Z)';
+    return type;
+  }
+
   addPenalty() {
     const pid = this.selectedProductId();
     if (pid === null || this.penForm.invalid) return;

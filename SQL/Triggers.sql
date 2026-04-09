@@ -173,3 +173,27 @@ CREATE TRIGGER trg_validate_interest_rate_overlap
 BEFORE INSERT OR UPDATE ON interest_rates
 FOR EACH ROW
 EXECUTE FUNCTION validate_interest_rate_overlap();
+
+
+CREATE OR REPLACE FUNCTION validate_penalty_rules()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM penalties p
+        WHERE p.valid_from > NEW.valid_from
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_penalties_chronological_order',
+            MESSAGE = 'Новый штраф должен иметь дату не раньше существующих штрафов.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_penalty_rules
+BEFORE INSERT OR UPDATE ON penalties
+FOR EACH ROW
+EXECUTE FUNCTION validate_penalty_rules();
