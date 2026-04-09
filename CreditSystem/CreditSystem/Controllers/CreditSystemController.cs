@@ -1,5 +1,6 @@
 using CreditSystem.Database;
 using CreditSystem.Dtos;
+using CreditSystem.Helpers;
 using CreditSystem.LoanMath;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -129,18 +130,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<int>> CreateRefinanceRate([FromBody] RefinanceRateWriteDto dto,
         CancellationToken ct)
     {
-        // Проверка 1: нельзя создавать ставку с одинаковой ValidFromDate
-        if (await db.RefinanceRates.AsNoTracking().AnyAsync(r => r.ValidFromDate == dto.ValidFromDate, ct))
-            return Conflict("Ставка с такой датой начала уже существует.");
-
-        // Проверка 2: нельзя создавать ставку, у которой ValidFrom попадает на период другой ставки
-        // (которая имеет как ValidFrom, так и ValidTo)
-        if (await db.RefinanceRates.AsNoTracking().AnyAsync(r =>
-                r.ValidFromDate <= dto.ValidFromDate &&
-                r.ValidToDate != null &&
-                r.ValidToDate >= dto.ValidFromDate, ct))
-            return Conflict("Новая ставка пересекается с существующей ставкой, у которой указана дата окончания.");
-
         var e = new RefinanceRate
         {
             ValidFromDate = dto.ValidFromDate,
@@ -154,11 +143,10 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         }
         catch (DbUpdateException ex)
         {
-            if (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
-            {
-                return Conflict("Ставка с такой датой начала уже существует.");
-            }
-            return Conflict("Ошибка при создании ставки: " + FmtDb(ex));
+            var (message, section) = ConstraintErrorHandler.GetConstraintError(ex);
+            if (message != null)
+                return BadRequest(new { error = message, section });
+            return BadRequest(new { error = "Ошибка при создании ставки рефинансирования.", section = "refinance" });
         }
 
         return Ok(e.Id);
@@ -707,7 +695,22 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (termMonths < credit.MinTermMonths || termMonths > credit.MaxTermMonths)
             return (false, $"Срок должен быть в диапазоне {credit.MinTermMonths} - {credit.MaxTermMonths} месяцев.", null);
 
-        var row = await ResolveInterestRow(creditId, currencyId, termMonths, issueDate, ct);
+        var matchedRates = await db.InterestRates.AsNoTracking()
+            .Where(r => r.CreditId == creditId
+                        && r.CurrencyId == currencyId
+                        && termMonths >= r.TermFromMonths && termMonths <= r.TermToMonths
+                        && r.ValidFrom <= issueDate
+                        && (r.ValidTo == null || r.ValidTo >= issueDate))
+            .OrderByDescending(r => r.ValidFrom)
+            .Take(2)
+            .ToListAsync(ct);
+
+        if (matchedRates.Count > 1)
+            return (false,
+                "Найдено несколько подходящих процентных ставок для выбранных условий. Устраните пересечение диапазонов ставок.",
+                null);
+
+        var row = matchedRates.FirstOrDefault();
         if (row == null)
         {
             var anyTermForCurrency = await db.InterestRates.AsNoTracking().AnyAsync(r =>

@@ -80,12 +80,23 @@ export default class ContractsPage implements OnInit {
     const credit = this.credits().find((c) => c.id === creditId);
     if (!credit) return;
 
-    if (this.form.controls.termMonths.value < credit.minTermMonths) {
-      this.form.patchValue({ termMonths: credit.minTermMonths });
-    }
-    if (this.form.controls.termMonths.value > credit.maxTermMonths) {
-      this.form.patchValue({ termMonths: credit.maxTermMonths });
-    }
+    this.form.controls.contractAmount.setValidators([
+      Validators.required,
+      Validators.min(credit.minAmount),
+      Validators.max(credit.maxAmount),
+    ]);
+    this.form.controls.termMonths.setValidators([
+      Validators.required,
+      Validators.min(credit.minTermMonths),
+      Validators.max(credit.maxTermMonths),
+    ]);
+    this.form.controls.contractAmount.updateValueAndValidity({ emitEvent: false });
+    this.form.controls.termMonths.updateValueAndValidity({ emitEvent: false });
+
+    this.form.patchValue({
+      contractAmount: credit.minAmount,
+      termMonths: credit.minTermMonths,
+    });
 
     this.api.creditCurrencies(creditId).subscribe((rows) => {
       const matchedIds = rows

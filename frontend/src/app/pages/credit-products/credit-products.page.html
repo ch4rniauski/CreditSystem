@@ -95,8 +95,8 @@
               }
             </select>
           </label>
-          <label>Срок от <input type="number" formControlName="termFromMonths" /></label>
-          <label>Срок до <input type="number" formControlName="termToMonths" /></label>
+          <label>Срок кредита от <input type="number" formControlName="termFromMonths" /></label>
+          <label>Срок кредита до <input type="number" formControlName="termToMonths" /></label>
           <label
             >Тип
             <select formControlName="rateType">
@@ -110,9 +110,9 @@
           @if (isFloatingRate()) {
             <label>Добавка % <input type="number" step="0.0001" placeholder="0.0000" required formControlName="additivePercent" /></label>
           }
-          <label>С действия <input type="date" formControlName="validFrom" /></label>
-          <label>По <input type="date" formControlName="validTo" /></label>
-          <button type="submit" [disabled]="rateForm.invalid">Добавить</button>
+          <label>Дата начала ставки <input type="date" formControlName="validFrom" /></label>
+          <label>Дата окончания ставки <input type="date" formControlName="validTo" /></label>
+          <button type="submit" [disabled]="!canAddRate()">Добавить</button>
         </form>
         @if (interestRatesError()) {
           <p class="err">{{ interestRatesError() }}</p>

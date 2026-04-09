@@ -37,6 +37,12 @@ export default class RefinancePage implements OnInit {
   add() {
     if (this.form.invalid) return;
     const v = this.form.getRawValue();
+
+    if (v.validToDate && new Date(v.validFromDate) > new Date(v.validToDate)) {
+      this.error.set('Дата начала не может быть позже даты окончания.');
+      return;
+    }
+
     this.api
       .createRefinanceRate({
         validFromDate: v.validFromDate,
@@ -52,11 +58,12 @@ export default class RefinancePage implements OnInit {
         error: (e) => {
           let errorMsg = 'Ошибка при создании ставки';
           if (e.error) {
-            // Если error — строка (plain text)
             if (typeof e.error === 'string') {
               errorMsg = e.error;
             }
-            // Если error — объект с текстом
+            else if (typeof e.error.error === 'string') {
+              errorMsg = e.error.error;
+            }
             else if (e.error.message) {
               errorMsg = e.error.message;
             }

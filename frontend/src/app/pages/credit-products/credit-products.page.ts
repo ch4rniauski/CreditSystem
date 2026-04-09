@@ -47,6 +47,20 @@ export default class CreditProductsPage implements OnInit {
   readonly rateType = signal<'fixed' | 'floating'>('fixed');
   readonly isFixedRate = computed(() => this.rateType() === 'fixed');
   readonly isFloatingRate = computed(() => this.rateType() === 'floating');
+  canAddRate(): boolean {
+    const v = this.rateForm.getRawValue();
+    if (Number(v.currencyId) < 1) return false;
+    if (!v.validFrom) return false;
+    if (v.termFromMonths < 1 || v.termToMonths < 1) return false;
+    if (v.termFromMonths > v.termToMonths) return false;
+    if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) return false;
+
+    if (v.rateType === 'fixed') {
+      return v.rateValue !== null && Number(v.rateValue) >= 0;
+    }
+
+    return v.additivePercent !== null && Number(v.additivePercent) >= 0;
+  }
 
   readonly productForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -98,7 +112,27 @@ export default class CreditProductsPage implements OnInit {
       } else {
         this.rateForm.patchValue({ rateValue: null }, { emitEvent: false });
       }
+
+      this.applyRateTypeValidators(type);
     });
+
+    this.applyRateTypeValidators(this.rateType());
+  }
+
+  private applyRateTypeValidators(type: 'fixed' | 'floating') {
+    const rateValueCtrl = this.rateForm.get('rateValue');
+    const additiveCtrl = this.rateForm.get('additivePercent');
+
+    if (type === 'fixed') {
+      rateValueCtrl?.setValidators([Validators.required, nonNegativeValidator()]);
+      additiveCtrl?.setValidators([]);
+    } else {
+      additiveCtrl?.setValidators([Validators.required, nonNegativeValidator()]);
+      rateValueCtrl?.setValidators([]);
+    }
+
+    rateValueCtrl?.updateValueAndValidity({ emitEvent: false });
+    additiveCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
   reloadProducts() {
@@ -221,6 +255,7 @@ export default class CreditProductsPage implements OnInit {
   }
 
   removeCc(currencyCode: string) {
+    if (!confirm('Удалить валюту из продукта?')) return;
     const pid = this.selectedProductId();
     const cid = this.currencyIdByCode(currencyCode);
     if (pid === null || cid === null) return;
@@ -232,7 +267,7 @@ export default class CreditProductsPage implements OnInit {
 
   addRate() {
     const pid = this.selectedProductId();
-    if (pid === null || this.rateForm.invalid) return;
+    if (pid === null || !this.canAddRate()) return;
     const v = this.rateForm.getRawValue();
 
     // Validate term range
@@ -261,7 +296,7 @@ export default class CreditProductsPage implements OnInit {
     this.api.createInterestRate(body).subscribe({
       next: () => {
         this.rateForm.reset({
-          currencyId: 0,
+          currencyId: this.linkedCurrencyOptions()[0]?.id ?? 0,
           termFromMonths: 1,
           termToMonths: 12,
           rateType: 'fixed',
@@ -272,6 +307,8 @@ export default class CreditProductsPage implements OnInit {
         });
         this.reloadDetails();
         this.interestRatesError.set(null);
+        this.rateType.set('fixed');
+        this.applyRateTypeValidators('fixed');
       },
       error: (e) => {
         const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
@@ -281,6 +318,7 @@ export default class CreditProductsPage implements OnInit {
   }
 
   deleteRate(r: InterestRateRow) {
+    if (!confirm('Удалить процентную ставку?')) return;
     this.api.deleteInterestRate(r.id).subscribe({
       next: () => this.reloadDetails(),
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
@@ -310,6 +348,7 @@ export default class CreditProductsPage implements OnInit {
   }
 
   deletePenalty(p: PenaltyRow) {
+    if (!confirm('Удалить штраф?')) return;
     this.api.deletePenalty(p.id).subscribe({
       next: () => this.reloadDetails(),
       error: (e) => this.error.set(e.error ?? 'Ошибка'),

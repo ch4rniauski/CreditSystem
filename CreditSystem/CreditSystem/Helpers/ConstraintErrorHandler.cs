@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
-namespace CreditSystem.Controllers;
+namespace CreditSystem.Helpers;
 
 /// <summary>
 /// Handles PostgreSQL constraint violation errors and maps them to user-friendly messages.
@@ -46,16 +46,30 @@ public static class ConstraintErrorHandler
             return (true, "Некорректный тип ставки", "interestRates");
         if (constraintName == "chk_interest_rates_rate_rules")
             return (true, "Некорректная комбинация ставки и добавки", "interestRates");
+        if (constraintName == "chk_interest_rates_no_overlap")
+            return (true,
+                "Эта ставка пересекается с уже существующей. Для одного продукта/валюты не должно быть пересечений по срокам и периоду действия.",
+                "interestRates");
 
         // Refinance rate constraint errors
         if (constraintName == "chk_refinance_rates_rate")
             return (true, "Ставка рефинансирования не может быть отрицательной", "refinance");
+        if (constraintName == "chk_refinance_rates_date_order")
+            return (true, "Дата начала не может быть позже даты окончания", "refinance");
+        if (constraintName == "chk_refinance_rates_no_overlap")
+            return (true, "Период ставки пересекается с существующим периодом", "refinance");
+        if (constraintName == "chk_refinance_rates_start_after_existing")
+            return (true,
+                "Дата начала новой ставки должна быть позже дат начала всех уже существующих ставок",
+                "refinance");
 
         // Credit currency errors (duplicate pair)
         if (pgEx.SqlState == "23505") // UNIQUE constraint violation
         {
             if (constraintName == "credit_currencies_pkey")
                 return (true, "Пара валюта-продукт уже существует", "currencies");
+            if (constraintName == "refinance_rates_valid_from_date_key")
+                return (true, "Ставка с такой датой начала уже существует", "refinance");
         }
 
         // Penalty constraint errors

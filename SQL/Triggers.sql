@@ -100,24 +100,76 @@ EXECUTE FUNCTION check_guarantor_allowed();
 
 
 
-CREATE OR REPLACE FUNCTION check_refinance_rate_overlap()
+CREATE OR REPLACE FUNCTION validate_refinance_rate_period()
 RETURNS TRIGGER AS $$
 BEGIN
+    IF NEW.valid_to_date IS NOT NULL AND NEW.valid_to_date < NEW.valid_from_date THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_refinance_rates_date_order',
+            MESSAGE = 'Дата начала не может быть позже даты окончания.';
+    END IF;
+
     IF EXISTS (
-        SELECT 1 FROM refinance_rates
-        WHERE id != COALESCE(NEW.id, 0)
-        AND valid_from_date <= NEW.valid_from_date
-        AND valid_to_date IS NOT NULL
-        AND valid_to_date >= NEW.valid_from_date
+        SELECT 1
+        FROM refinance_rates r
+        WHERE r.id <> COALESCE(NEW.id, 0)
+          AND r.valid_from_date >= NEW.valid_from_date
     ) THEN
-        RAISE EXCEPTION 'Новая ставка пересекается с существующей ставкой, у которой указана дата окончания';
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_refinance_rates_start_after_existing',
+            MESSAGE = 'Дата начала новой ставки должна быть позже дат начала всех существующих ставок.';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM refinance_rates r
+        WHERE r.id <> COALESCE(NEW.id, 0)
+          AND daterange(r.valid_from_date, COALESCE(r.valid_to_date, 'infinity'::date), '[]')
+              && daterange(NEW.valid_from_date, COALESCE(NEW.valid_to_date, 'infinity'::date), '[]')
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_refinance_rates_no_overlap',
+            MESSAGE = 'Период ставки рефинансирования пересекается с уже существующим периодом.';
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_check_refinance_overlap
+CREATE TRIGGER trg_validate_refinance_rate_period
 BEFORE INSERT OR UPDATE ON refinance_rates
 FOR EACH ROW
-EXECUTE FUNCTION check_refinance_rate_overlap();
+EXECUTE FUNCTION validate_refinance_rate_period();
+
+
+CREATE OR REPLACE FUNCTION validate_interest_rate_overlap()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM interest_rates r
+        WHERE r.id <> COALESCE(NEW.id, 0)
+          AND r.credit_id = NEW.credit_id
+          AND r.currency_id = NEW.currency_id
+          AND int4range(r.term_from_months, r.term_to_months, '[]')
+              && int4range(NEW.term_from_months, NEW.term_to_months, '[]')
+          AND daterange(r.valid_from, COALESCE(r.valid_to, 'infinity'::date), '[]')
+              && daterange(NEW.valid_from, COALESCE(NEW.valid_to, 'infinity'::date), '[]')
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_interest_rates_no_overlap',
+            MESSAGE = 'Обнаружено пересечение процентных ставок для одного продукта и валюты.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_validate_interest_rate_overlap
+BEFORE INSERT OR UPDATE ON interest_rates
+FOR EACH ROW
+EXECUTE FUNCTION validate_interest_rate_overlap();

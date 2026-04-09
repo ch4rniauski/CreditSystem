@@ -1,8 +1,14 @@
+:host {
+  display: block;
+  padding-bottom: 14rem;
+}
+
       .panel {
         margin: 1.25rem 0;
         padding: 1rem;
         background: #f6f6f6;
         border-radius: 6px;
+        overflow: visible;
       }
       .form-grid {
         display: flex;
