@@ -105,6 +105,9 @@ export class ApiService {
   contracts() {
     return this.http.get<ContractRow[]>(`${this.base}/contracts`);
   }
+  contractDetails(id: number) {
+    return this.http.get<ContractDetailsDto>(`${this.base}/contracts/${id}`);
+  }
   createContract(body: ContractCreateDto) {
     return this.http.post<number>(`${this.base}/contracts`, body);
   }
@@ -287,6 +290,29 @@ export interface ContractRow {
   termMonths: number;
   issueDate: string;
   status: string;
+  remainingPrincipal: number;
+}
+export interface ContractDetailsDto {
+  id: number;
+  clientId: number;
+  clientDisplay: string;
+  clientType: string;
+  clientPassportSeries: string | null;
+  clientPassportNumber: string | null;
+  creditId: number;
+  creditName: string;
+  currencyId: number;
+  currencyCode: string;
+  interestRateId: number | null;
+  contractAmount: number;
+  termMonths: number;
+  issueDate: string;
+  status: string;
+  rateType: string;
+  fixedInterestRate: number | null;
+  fixedAdditivePercent: number | null;
+  fixedEarlyPenaltyX: number | null;
+  fixedLatePenaltyZ: number | null;
   remainingPrincipal: number;
 }
 export interface ContractCreateDto {

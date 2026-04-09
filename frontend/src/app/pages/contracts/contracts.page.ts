@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ApiService, ContractRow, CreditProductRow, CurrencyRow } from '../../core/api.service';
+import { ApiService, ContractDetailsDto, ContractRow, CreditProductRow, CurrencyRow } from '../../core/api.service';
 
 @Component({
   selector: 'app-contracts',
@@ -19,6 +19,8 @@ export default class ContractsPage implements OnInit {
   readonly currencies = signal<CurrencyRow[]>([]);
   readonly availableCurrencies = signal<CurrencyRow[]>([]);
   readonly clientOptions = signal<{ id: number; kind: string; label: string }[]>([]);
+  readonly viewedContract = signal<ContractDetailsDto | null>(null);
+  readonly detailsLoading = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
@@ -165,5 +167,50 @@ export default class ContractsPage implements OnInit {
       next: () => this.reload(),
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
+  }
+
+  openDetails(c: ContractRow) {
+    this.detailsLoading.set(true);
+    this.api.contractDetails(c.id).subscribe({
+      next: (details) => {
+        this.viewedContract.set(details);
+        this.detailsLoading.set(false);
+      },
+      error: (e) => {
+        this.detailsLoading.set(false);
+        this.error.set(typeof e.error === 'string' ? e.error : 'Не удалось загрузить условия договора');
+      },
+    });
+  }
+
+  closeDetails() {
+    this.viewedContract.set(null);
+    this.detailsLoading.set(false);
+  }
+
+  rateTypeLabel(value: string): string {
+    return value === 'floating' ? 'Плавающая' : 'Фиксированная';
+  }
+
+  contractRateSummary(d: ContractDetailsDto): string {
+    if (d.rateType === 'floating') {
+      const additive = d.fixedAdditivePercent ?? 0;
+      const annual = d.fixedInterestRate ?? 0;
+      return `Плавающая (${annual}%)`;
+    }
+
+    return `Фиксированная (${d.fixedInterestRate ?? 0}%)`;
+  }
+
+  clientDisplayWithPassport(d: ContractDetailsDto): string {
+    if (d.clientPassportSeries && d.clientPassportNumber) {
+      return `${d.clientDisplay} (${d.clientPassportSeries}${d.clientPassportNumber})`;
+    }
+
+    return d.clientDisplay;
+  }
+
+  clientTypeLabel(value: string): string {
+    return value === 'legal' ? 'Юридическое лицо' : 'Физическое лицо';
   }
 }

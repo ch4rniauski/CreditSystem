@@ -58,6 +58,7 @@
             <td>{{ c.status }}</td>
             <td>{{ c.remainingPrincipal }}</td>
             <td>
+              <button type="button" (click)="openDetails(c)">Просмотр</button>
               @if (c.status === 'Оформляется') {
                 <button type="button" (click)="sign(c)">Оформить</button>
                 <button type="button" (click)="remove(c)">Удалить</button>
@@ -67,3 +68,34 @@
         }
       </tbody>
     </table>
+
+    @if (viewedContract() || detailsLoading()) {
+      <div class="modal-backdrop" (click)="closeDetails()"></div>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="Условия договора">
+        <header class="modal-head">
+          <h2>Условия договора</h2>
+          <button type="button" (click)="closeDetails()">Закрыть</button>
+        </header>
+
+        @if (detailsLoading()) {
+          <p>Загрузка...</p>
+        }
+
+        @if (viewedContract(); as d) {
+          <div class="details-grid">
+            <div><strong>Статус:</strong> {{ d.status }}</div>
+            <div><strong>Клиент:</strong> {{ clientDisplayWithPassport(d) }}</div>
+            <div><strong>Тип клиента:</strong> {{ clientTypeLabel(d.clientType) }}</div>
+            <div><strong>Продукт:</strong> {{ d.creditName }}</div>
+            <div><strong>Валюта:</strong> {{ d.currencyCode }}</div>
+            <div><strong>Сумма договора:</strong> {{ d.contractAmount }}</div>
+            <div><strong>Срок:</strong> {{ d.termMonths }} мес.</div>
+            <div><strong>Дата договора:</strong> {{ d.issueDate | date: 'dd.MM.yyyy' }}</div>
+            <div><strong>Остаток:</strong> {{ d.remainingPrincipal }}</div>
+            <div><strong>Ставка:</strong> {{ contractRateSummary(d) }}</div>
+            <div><strong>Штраф X (досрочное):</strong> {{ d.fixedEarlyPenaltyX ?? 0 }}</div>
+            <div><strong>Штраф Z (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}</div>
+          </div>
+        }
+      </section>
+    }

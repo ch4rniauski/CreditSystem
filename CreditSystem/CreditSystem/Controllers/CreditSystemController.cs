@@ -832,6 +832,45 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("contracts/{id:int}")]
+    public async Task<ActionResult<ContractDetailsDto>> GetContractDetails(int id, CancellationToken ct)
+    {
+        var row = await db.Contracts.AsNoTracking()
+            .Where(c => c.Id == id)
+            .Join(db.Credits.AsNoTracking(), c => c.CreditId, cr => cr.Id, (c, cr) => new { c, cr })
+            .Join(db.Currencies.AsNoTracking(), x => x.c.CurrencyId, cu => cu.Id,
+                (x, cu) => new { x.c, x.cr, cu })
+            .Join(db.Clients.AsNoTracking(), x => x.c.ClientId, cl => cl.Id, (x, cl) => new { x, cl })
+            .Select(z => new ContractDetailsDto(
+                z.x.c.Id,
+                z.x.c.ClientId ?? 0,
+                z.cl.ClientType == "legal"
+                    ? z.cl.LegalPerson!.Name
+                    : z.cl.PhysPerson!.FullName,
+                z.cl.ClientType,
+                z.cl.ClientType == "physical" ? z.cl.PhysPerson!.PassportSeries : null,
+                z.cl.ClientType == "physical" ? z.cl.PhysPerson!.PassportNumber : null,
+                z.x.c.CreditId ?? 0,
+                z.x.cr.Name,
+                z.x.c.CurrencyId ?? 0,
+                z.x.cu.Code,
+                z.x.c.InterestRateId,
+                z.x.c.ContractAmount,
+                z.x.c.TermMonths,
+                z.x.c.IssueDate,
+                z.x.c.Status,
+                z.x.c.RateType,
+                z.x.c.FixedInterestRate,
+                z.x.c.FixedAdditivePercent,
+                z.x.c.FixedEarlyPenaltyX,
+                z.x.c.FixedLatePenaltyZ,
+                z.x.c.RemainingPrincipal))
+            .FirstOrDefaultAsync(ct);
+
+        if (row == null) return NotFound();
+        return Ok(row);
+    }
+
     [HttpPost("contracts")]
     public async Task<ActionResult<int>> CreateContract([FromBody] ContractCreateDto dto, CancellationToken ct)
     {
@@ -932,6 +971,24 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var contract = await db.Contracts.FindAsync([id], ct);
         if (contract == null) return NotFound();
         if (contract.Status != StDraft) return Conflict();
+
+        if (contract.CreditId is null || contract.CurrencyId is null || contract.ClientId is null)
+            return BadRequest("Недостаточно данных договора для оформления.");
+
+        var (ok, err, terms) =
+            await TryResolveTerms(contract.CreditId.Value, contract.CurrencyId.Value, contract.TermMonths,
+                contract.IssueDate, ct);
+        if (!ok) return BadRequest(err);
+
+        var pen = await ResolvePenaltiesAtIssue(contract.CreditId.Value, contract.IssueDate, ct);
+
+        contract.InterestRateId = terms!.InterestRateId;
+        contract.RateType = terms.RateType;
+        contract.FixedInterestRate = terms.Annual;
+        contract.FixedAdditivePercent = terms.Additive;
+        contract.FixedEarlyPenaltyX = pen.early;
+        contract.FixedLatePenaltyZ = pen.late;
+
         contract.Status = StSigned;
         contract.RemainingPrincipal = contract.ContractAmount;
         try

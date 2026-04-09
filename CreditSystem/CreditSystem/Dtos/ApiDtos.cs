@@ -91,6 +91,29 @@ public record ContractRow(
     string Status,
     decimal RemainingPrincipal);
 
+public record ContractDetailsDto(
+    int Id,
+    int ClientId,
+    string ClientDisplay,
+    string ClientType,
+    string? ClientPassportSeries,
+    string? ClientPassportNumber,
+    int CreditId,
+    string CreditName,
+    int CurrencyId,
+    string CurrencyCode,
+    int? InterestRateId,
+    decimal ContractAmount,
+    int TermMonths,
+    DateOnly IssueDate,
+    string Status,
+    string RateType,
+    decimal? FixedInterestRate,
+    decimal? FixedAdditivePercent,
+    decimal? FixedEarlyPenaltyX,
+    decimal? FixedLatePenaltyZ,
+    decimal RemainingPrincipal);
+
 public record ContractDraftDto(
     string CreditProductName,
     string ClientDisplayName,

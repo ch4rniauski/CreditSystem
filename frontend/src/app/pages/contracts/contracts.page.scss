@@ -27,3 +27,38 @@
         word-break: break-word;
         white-space: normal;
       }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 1000;
+      }
+
+      .modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(820px, 94vw);
+        max-height: 85vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 8px;
+        padding: 1rem;
+        z-index: 1001;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+      }
+
+      .modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.5rem 1rem;
+      }
