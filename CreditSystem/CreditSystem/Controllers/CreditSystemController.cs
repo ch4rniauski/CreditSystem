@@ -610,21 +610,31 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var passportSeries = dto.PassportSeries.Trim().ToUpperInvariant();
+        var passportNumber = dto.PassportNumber.Trim();
         var c = new Client { ClientType = "physical" };
         db.Clients.Add(c);
-        await db.SaveChangesAsync(ct);
-        db.PhysPersons.Add(new PhysPerson
+        try
         {
-            ClientId = c.Id,
-            FullName = dto.FullName,
-            PassportSeries = dto.PassportSeries,
-            PassportNumber = dto.PassportNumber,
-            ActualAddress = dto.ActualAddress,
-            Phone = dto.Phone
-        });
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        return Ok(c.Id);
+            await db.SaveChangesAsync(ct);
+            db.PhysPersons.Add(new PhysPerson
+            {
+                ClientId = c.Id,
+                FullName = dto.FullName,
+                PassportSeries = passportSeries,
+                PassportNumber = passportNumber,
+                ActualAddress = dto.ActualAddress,
+                Phone = dto.Phone
+            });
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+            return Ok(c.Id);
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, _) = ConstraintErrorHandler.GetConstraintError(ex);
+            return Conflict(message ?? "Ошибка при создании физического лица.");
+        }
     }
 
     [HttpPut("clients/physical/{clientId:int}")]
@@ -633,13 +643,23 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     {
         var p = await db.PhysPersons.FindAsync([clientId], ct);
         if (p == null) return NotFound();
+        var passportSeries = dto.PassportSeries.Trim().ToUpperInvariant();
+        var passportNumber = dto.PassportNumber.Trim();
         p.FullName = dto.FullName;
-        p.PassportSeries = dto.PassportSeries;
-        p.PassportNumber = dto.PassportNumber;
+        p.PassportSeries = passportSeries;
+        p.PassportNumber = passportNumber;
         p.ActualAddress = dto.ActualAddress;
         p.Phone = dto.Phone;
-        await db.SaveChangesAsync(ct);
-        return NoContent();
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return NoContent();
+        }
+        catch (DbUpdateException ex)
+        {
+            var (message, _) = ConstraintErrorHandler.GetConstraintError(ex);
+            return Conflict(message ?? "Ошибка при обновлении физического лица.");
+        }
     }
 
     [HttpDelete("clients/{clientId:int}")]
@@ -650,9 +670,31 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var c = await db.Clients.Include(cl => cl.LegalPerson).Include(cl => cl.PhysPerson)
             .FirstOrDefaultAsync(cl => cl.Id == clientId, ct);
         if (c == null) return NotFound();
+
+        if (c.PhysPerson != null)
+        {
+            var linkedGuarantors = await db.Guarantors
+                .Where(g => g.PhysPersonId == c.PhysPerson.ClientId)
+                .ToListAsync(ct);
+            if (linkedGuarantors.Count > 0)
+                db.Guarantors.RemoveRange(linkedGuarantors);
+            db.PhysPersons.Remove(c.PhysPerson);
+        }
+
+        if (c.LegalPerson != null)
+            db.LegalPersons.Remove(c.LegalPerson);
+
         db.Clients.Remove(c);
-        await db.SaveChangesAsync(ct);
-        return NoContent();
+
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return NoContent();
+        }
+        catch (DbUpdateException ex)
+        {
+            return Conflict(FmtDb(ex));
+        }
     }
 
     #endregion

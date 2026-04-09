@@ -8,7 +8,7 @@ ADD CONSTRAINT chk_clients_client_type
 CHECK (client_type IN ('legal', 'physical'));
 
 CREATE TABLE legal_persons (
-    client_id INTEGER PRIMARY KEY REFERENCES clients(id),
+    client_id INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     ownership_type VARCHAR(50) NOT NULL,
     legal_address TEXT NOT NULL,
@@ -16,13 +16,17 @@ CREATE TABLE legal_persons (
 );
 
 CREATE TABLE phys_persons (
-    client_id INTEGER PRIMARY KEY REFERENCES clients(id),
+    client_id INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
     full_name VARCHAR(255) NOT NULL,
     passport_series VARCHAR(2) NOT NULL,
     passport_number VARCHAR(7) NOT NULL,
     actual_address TEXT,
     phone VARCHAR(20)
 );
+
+ALTER TABLE phys_persons
+ADD CONSTRAINT uq_phys_persons_passport
+UNIQUE (passport_series, passport_number);
 
 CREATE TABLE credits (
     id SERIAL PRIMARY KEY,
@@ -238,9 +242,12 @@ CHECK (remaining_after_payment >= 0);
 CREATE TABLE guarantors (
     id SERIAL PRIMARY KEY,
     contract_id INTEGER REFERENCES contracts(id),
-    phys_person_id INTEGER REFERENCES phys_persons(client_id),
-    UNIQUE(contract_id, phys_person_id)
+    phys_person_id INTEGER REFERENCES phys_persons(client_id) ON DELETE CASCADE
 );
+
+ALTER TABLE guarantors
+ADD CONSTRAINT guarantors_unique_contract_person
+UNIQUE (contract_id, phys_person_id);
 
 CREATE TABLE pledges (
     id SERIAL PRIMARY KEY,

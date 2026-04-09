@@ -309,7 +309,7 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasOne(d => d.Client).WithOne(p => p.LegalPerson)
                 .HasForeignKey<LegalPerson>(d => d.ClientId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("legal_persons_client_id_fkey");
         });
 
@@ -432,7 +432,7 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasOne(d => d.Client).WithOne(p => p.PhysPerson)
                 .HasForeignKey<PhysPerson>(d => d.ClientId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("phys_persons_client_id_fkey");
         });
 
