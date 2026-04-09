@@ -42,6 +42,7 @@
           <th>Продукт</th>
           <th>Клиент</th>
           <th>Валюта</th>
+          <th>Дата договора</th>
           <th>Сумма</th>
           <th>Статус</th>
           <th>Остаток</th>
@@ -54,6 +55,7 @@
             <td>{{ c.creditName }}</td>
             <td>{{ c.clientDisplay }}</td>
             <td>{{ c.currencyCode }}</td>
+            <td>{{ c.issueDate | date: 'dd.MM.yyyy' }}</td>
             <td>{{ c.contractAmount }}</td>
             <td>{{ c.status }}</td>
             <td>{{ c.remainingPrincipal }}</td>
@@ -93,8 +95,8 @@
             <div><strong>Дата договора:</strong> {{ d.issueDate | date: 'dd.MM.yyyy' }}</div>
             <div><strong>Остаток:</strong> {{ d.remainingPrincipal }}</div>
             <div><strong>Ставка:</strong> {{ contractRateSummary(d) }}</div>
-            <div><strong>Штраф X (досрочное):</strong> {{ d.fixedEarlyPenaltyX ?? 0 }}</div>
-            <div><strong>Штраф Z (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}</div>
+            <div><strong>Штраф (досрочное):</strong> {{ d.fixedEarlyPenaltyX ?? 0 }}%</div>
+            <div><strong>Штраф (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}%</div>
           </div>
         }
       </section>

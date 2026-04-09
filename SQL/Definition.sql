@@ -166,7 +166,7 @@ CREATE TABLE contracts (
     issue_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'Оформляется',
     rate_type VARCHAR(20) NOT NULL,
-    fixed_interest_rate DECIMAL(5,4),
+    fixed_interest_rate DECIMAL(10,4),
     fixed_additive_percent DECIMAL(5,4),
     fixed_early_penalty_x DECIMAL(5,4) DEFAULT 0,
     fixed_late_penalty_z DECIMAL(5,4),

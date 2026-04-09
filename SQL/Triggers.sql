@@ -102,12 +102,30 @@ EXECUTE FUNCTION check_guarantor_allowed();
 
 CREATE OR REPLACE FUNCTION validate_refinance_rate_period()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_previous_open_ended_id INT;
 BEGIN
     IF NEW.valid_to_date IS NOT NULL AND NEW.valid_to_date < NEW.valid_from_date THEN
         RAISE EXCEPTION USING
             ERRCODE = '23514',
             CONSTRAINT = 'chk_refinance_rates_date_order',
             MESSAGE = 'Дата начала не может быть позже даты окончания.';
+    END IF;
+
+    IF TG_OP = 'INSERT' AND NEW.valid_to_date IS NULL THEN
+        SELECT r.id
+        INTO v_previous_open_ended_id
+        FROM refinance_rates r
+        WHERE r.valid_to_date IS NULL
+          AND r.valid_from_date < NEW.valid_from_date
+        ORDER BY r.valid_from_date DESC
+        LIMIT 1;
+
+        IF v_previous_open_ended_id IS NOT NULL THEN
+            UPDATE refinance_rates
+            SET valid_to_date = NEW.valid_from_date - 1
+            WHERE id = v_previous_open_ended_id;
+        END IF;
     END IF;
 
     IF EXISTS (

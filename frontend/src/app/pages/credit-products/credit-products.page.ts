@@ -406,8 +406,8 @@ export default class CreditProductsPage implements OnInit {
   }
 
   penaltyTypeLabel(type: string): string {
-    if (type === 'early_repayment') return 'Досрочное (X)';
-    if (type === 'late_payment') return 'Просрочка (Z)';
+    if (type === 'early_repayment') return 'Досрочное';
+    if (type === 'late_payment') return 'Просрочка';
     return type;
   }
 

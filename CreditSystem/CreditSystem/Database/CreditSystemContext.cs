@@ -88,7 +88,7 @@ public partial class CreditSystemContext : DbContext
                 .HasDefaultValue(0m)
                 .HasColumnName("fixed_early_penalty_x");
             entity.Property(e => e.FixedInterestRate)
-                .HasPrecision(5, 4)
+                .HasPrecision(10, 4)
                 .HasColumnName("fixed_interest_rate");
             entity.Property(e => e.FixedLatePenaltyZ)
                 .HasPrecision(5, 4)
@@ -236,7 +236,7 @@ public partial class CreditSystemContext : DbContext
 
             entity.ToTable("guarantors");
 
-            entity.HasIndex(e => new { e.ContractId, e.PhysPersonId }, "guarantors_contract_id_phys_person_id_key").IsUnique();
+            entity.HasIndex(e => new { e.ContractId, e.PhysPersonId }, "guarantors_unique_contract_person").IsUnique();
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.ContractId).HasColumnName("contract_id");
@@ -248,6 +248,7 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasOne(d => d.PhysPerson).WithMany(p => p.Guarantors)
                 .HasForeignKey(d => d.PhysPersonId)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("guarantors_phys_person_id_fkey");
         });
 
@@ -309,7 +310,6 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasOne(d => d.Client).WithOne(p => p.LegalPerson)
                 .HasForeignKey<LegalPerson>(d => d.ClientId)
-                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("legal_persons_client_id_fkey");
         });
 
@@ -392,6 +392,8 @@ public partial class CreditSystemContext : DbContext
 
             entity.ToTable("penalties");
 
+            entity.HasIndex(e => new { e.PenaltyType, e.ValidFrom }, "uq_penalties_credit_type_valid_from").IsUnique();
+
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CreditId).HasColumnName("credit_id");
             entity.Property(e => e.PenaltyType)
@@ -413,6 +415,8 @@ public partial class CreditSystemContext : DbContext
 
             entity.ToTable("phys_persons");
 
+            entity.HasIndex(e => new { e.PassportSeries, e.PassportNumber }, "uq_phys_persons_passport").IsUnique();
+
             entity.Property(e => e.ClientId)
                 .ValueGeneratedNever()
                 .HasColumnName("client_id");
@@ -432,7 +436,6 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasOne(d => d.Client).WithOne(p => p.PhysPerson)
                 .HasForeignKey<PhysPerson>(d => d.ClientId)
-                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("phys_persons_client_id_fkey");
         });
 
