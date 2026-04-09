@@ -47,12 +47,70 @@ export default class CreditProductsPage implements OnInit {
   readonly rateType = signal<'fixed' | 'floating'>('fixed');
   readonly isFixedRate = computed(() => this.rateType() === 'fixed');
   readonly isFloatingRate = computed(() => this.rateType() === 'floating');
+  private readonly rateTermRangeError = 'Срок "от" не может быть больше срока "до"';
+  private readonly rateTermBoundsError = 'Сроки процентной ставки должны быть в пределах минимального и максимального срока кредитного продукта';
+
+  private selectedProduct(): CreditProductRow | null {
+    const id = this.selectedProductId();
+    if (id === null) return null;
+    return this.products().find((p) => p.id === id) ?? null;
+  }
+
+  rateTermLimitsLabel(): string {
+    const product = this.selectedProduct();
+    if (!product) return 'Срок в месяцах';
+    return `Срок в месяцах (${product.minTermMonths}-${product.maxTermMonths})`;
+  }
+
+  private isRateTermWithinProductBounds(termFrom: number, termTo: number): boolean {
+    const product = this.selectedProduct();
+    if (!product) return false;
+    return termFrom >= product.minTermMonths
+      && termFrom <= product.maxTermMonths
+      && termTo >= product.minTermMonths
+      && termTo <= product.maxTermMonths;
+  }
+
+  private areRateRequiredFieldsFilled(): boolean {
+    const v = this.rateForm.getRawValue();
+    if (Number(v.currencyId) < 1) return false;
+    if (!v.validFrom) return false;
+    if (v.termFromMonths < 1 || v.termToMonths < 1) return false;
+    if (v.rateType === 'fixed') return v.rateValue !== null;
+    return v.additivePercent !== null;
+  }
+
+  private refreshRateTermsValidationMessage() {
+    const currentError = this.interestRatesError();
+    const isOwnTermsError = currentError === this.rateTermRangeError || currentError === this.rateTermBoundsError;
+
+    if (!this.areRateRequiredFieldsFilled()) {
+      if (isOwnTermsError) this.interestRatesError.set(null);
+      return;
+    }
+
+    const v = this.rateForm.getRawValue();
+    if (v.termFromMonths > v.termToMonths) {
+      this.interestRatesError.set(this.rateTermRangeError);
+      return;
+    }
+
+    if (!this.isRateTermWithinProductBounds(v.termFromMonths, v.termToMonths)) {
+      this.interestRatesError.set(this.rateTermBoundsError);
+      return;
+    }
+
+    if (isOwnTermsError) this.interestRatesError.set(null);
+  }
+
   canAddRate(): boolean {
+    if (this.selectedProductId() === null) return false;
     const v = this.rateForm.getRawValue();
     if (Number(v.currencyId) < 1) return false;
     if (!v.validFrom) return false;
     if (v.termFromMonths < 1 || v.termToMonths < 1) return false;
     if (v.termFromMonths > v.termToMonths) return false;
+    if (!this.isRateTermWithinProductBounds(v.termFromMonths, v.termToMonths)) return false;
     if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) return false;
 
     if (v.rateType === 'fixed') {
@@ -118,7 +176,10 @@ export default class CreditProductsPage implements OnInit {
       }
 
       this.applyRateTypeValidators(type);
+      this.refreshRateTermsValidationMessage();
     });
+
+    this.rateForm.valueChanges.subscribe(() => this.refreshRateTermsValidationMessage());
 
     this.applyRateTypeValidators(this.rateType());
   }
@@ -157,6 +218,11 @@ export default class CreditProductsPage implements OnInit {
       minTermMonths: p.minTermMonths,
       maxTermMonths: p.maxTermMonths,
     });
+    this.rateForm.patchValue({
+      termFromMonths: p.minTermMonths,
+      termToMonths: p.maxTermMonths,
+    });
+    this.refreshRateTermsValidationMessage();
     this.reloadDetails();
   }
 
@@ -174,6 +240,10 @@ export default class CreditProductsPage implements OnInit {
     this.ccRows.set([]);
     this.rateRows.set([]);
     this.penRows.set([]);
+    this.rateForm.patchValue({
+      termFromMonths: 1,
+      termToMonths: 12,
+    });
     this.clearErrors();
   }
 
@@ -276,7 +346,12 @@ export default class CreditProductsPage implements OnInit {
 
     // Validate term range
     if (v.termFromMonths > v.termToMonths) {
-      this.interestRatesError.set('Срок "от" не может быть больше срока "до"');
+      this.interestRatesError.set(this.rateTermRangeError);
+      return;
+    }
+
+    if (!this.isRateTermWithinProductBounds(v.termFromMonths, v.termToMonths)) {
+      this.interestRatesError.set(this.rateTermBoundsError);
       return;
     }
 
@@ -299,10 +374,11 @@ export default class CreditProductsPage implements OnInit {
     };
     this.api.createInterestRate(body).subscribe({
       next: () => {
+        const product = this.selectedProduct();
         this.rateForm.reset({
           currencyId: this.linkedCurrencyOptions()[0]?.id ?? 0,
-          termFromMonths: 1,
-          termToMonths: 12,
+          termFromMonths: product?.minTermMonths ?? 1,
+          termToMonths: product?.maxTermMonths ?? 12,
           rateType: 'fixed',
           rateValue: null,
           additivePercent: null,

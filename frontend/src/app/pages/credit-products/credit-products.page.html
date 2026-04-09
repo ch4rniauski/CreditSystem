@@ -95,8 +95,8 @@
               }
             </select>
           </label>
-          <label>Срок кредита от <input type="number" formControlName="termFromMonths" /></label>
-          <label>Срок кредита до <input type="number" formControlName="termToMonths" /></label>
+          <label>Срок кредита от (мес.) <input type="number" formControlName="termFromMonths" /></label>
+          <label>Срок кредита до (мес.) <input type="number" formControlName="termToMonths" /></label>
           <label
             >Тип
             <select formControlName="rateType">
@@ -114,6 +114,7 @@
           <label>Дата окончания ставки <input type="date" formControlName="validTo" /></label>
           <button type="submit" [disabled]="!canAddRate()">Добавить</button>
         </form>
+        <p class="hint">{{ rateTermLimitsLabel() }}</p>
         @if (interestRatesError()) {
           <p class="err">{{ interestRatesError() }}</p>
         }

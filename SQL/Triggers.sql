@@ -147,7 +147,32 @@ EXECUTE FUNCTION validate_refinance_rate_period();
 
 CREATE OR REPLACE FUNCTION validate_interest_rate_overlap()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_min_term INT;
+    v_max_term INT;
 BEGIN
+    SELECT c.min_term_months, c.max_term_months
+    INTO v_min_term, v_max_term
+    FROM credits c
+    WHERE c.id = NEW.credit_id;
+
+    IF v_min_term IS NULL OR v_max_term IS NULL THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_interest_rates_within_credit_term_bounds',
+            MESSAGE = 'Кредитный продукт не найден для проверки диапазона сроков.';
+    END IF;
+
+    IF NEW.term_from_months < v_min_term
+       OR NEW.term_from_months > v_max_term
+       OR NEW.term_to_months < v_min_term
+       OR NEW.term_to_months > v_max_term THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            CONSTRAINT = 'chk_interest_rates_within_credit_term_bounds',
+            MESSAGE = 'Диапазон сроков ставки должен находиться в границах срока кредитного продукта.';
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM interest_rates r

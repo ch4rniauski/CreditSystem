@@ -46,6 +46,8 @@ public static class ConstraintErrorHandler
             return (true, "Некорректный тип ставки", "interestRates");
         if (constraintName == "chk_interest_rates_rate_rules")
             return (true, "Некорректная комбинация ставки и добавки", "interestRates");
+        if (constraintName == "chk_interest_rates_within_credit_term_bounds")
+            return (true, "Сроки процентной ставки должны быть в пределах минимального и максимального срока кредитного продукта", "interestRates");
         if (constraintName == "chk_interest_rates_no_overlap")
             return (true,
                 "Эта ставка пересекается с уже существующей. Для одного продукта/валюты не должно быть пересечений по срокам и периоду действия.",
