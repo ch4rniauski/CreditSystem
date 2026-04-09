@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, ContractRow, GuarantorRow, PhysicalClientRow } from '../../core/api.service';
 
@@ -17,7 +17,15 @@ export default class GuarantorsPage implements OnInit {
   readonly guarantors = signal<GuarantorRow[]>([]);
   readonly draftPhysContracts = signal<ContractRow[]>([]);
   readonly phys = signal<PhysicalClientRow[]>([]);
+  readonly selectedContractId = signal<number>(0);
   readonly error = signal<string | null>(null);
+
+  readonly availablePhys = computed(() => {
+    const contractId = this.selectedContractId();
+    const ownerClientId = this.draftPhysContracts().find((c) => c.id === contractId)?.clientId;
+    if (!ownerClientId) return this.phys();
+    return this.phys().filter((p) => p.clientId !== ownerClientId);
+  });
 
   readonly form = this.fb.nonNullable.group({
     contractId: [0, Validators.min(1)],
@@ -28,8 +36,12 @@ export default class GuarantorsPage implements OnInit {
     this.reload();
     this.api.physicalClients().subscribe((p) => {
       this.phys.set(p);
-      const first = p[0]?.clientId ?? 0;
-      if (first) this.form.patchValue({ physPersonClientId: first });
+      this.ensureGuarantorSelection();
+    });
+
+    this.form.get('contractId')?.valueChanges.subscribe((value) => {
+      this.selectedContractId.set(Number(value) || 0);
+      this.ensureGuarantorSelection();
     });
   }
 
@@ -39,8 +51,17 @@ export default class GuarantorsPage implements OnInit {
       const drafts = list.filter((c) => c.status === 'Оформляется' && c.clientType === 'physical');
       this.draftPhysContracts.set(drafts);
       const first = drafts[0]?.id ?? 0;
-      if (first) this.form.patchValue({ contractId: first });
+      this.selectedContractId.set(first);
+      this.form.patchValue({ contractId: first });
+      this.ensureGuarantorSelection();
     });
+  }
+
+  private ensureGuarantorSelection() {
+    const options = this.availablePhys();
+    const current = Number(this.form.getRawValue().physPersonClientId);
+    if (options.some((p) => p.clientId === current)) return;
+    this.form.patchValue({ physPersonClientId: options[0]?.clientId ?? 0 });
   }
 
   add() {

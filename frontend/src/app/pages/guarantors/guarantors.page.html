@@ -13,13 +13,17 @@
         <label
           >Поручитель (физлицо)
           <select formControlName="physPersonClientId">
-            @for (p of phys(); track p.clientId) {
+            @for (p of availablePhys(); track p.clientId) {
               <option [value]="p.clientId">{{ p.fullName }}, {{ p.passportSeries }} {{ p.passportNumber }}</option>
             }
           </select>
         </label>
-        <button type="submit" [disabled]="form.invalid">Добавить</button>
+        <button type="submit" [disabled]="form.invalid || availablePhys().length === 0">Добавить</button>
       </form>
+
+      @if (availablePhys().length === 0) {
+        <p class="hint">Нет доступных поручителей: единственный физлицо в списке совпадает с клиентом договора.</p>
+      }
 
       @if (error()) {
         <p class="err">{{ error() }}</p>

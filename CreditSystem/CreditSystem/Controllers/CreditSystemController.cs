@@ -774,6 +774,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             .Join(db.Clients.AsNoTracking(), x => x.c.ClientId, cl => cl.Id, (x, cl) => new { x, cl })
             .Select(z => new ContractRow(
                 z.x.c.Id,
+                z.x.c.ClientId ?? 0,
                 z.x.cr.Name,
                 z.cl.ClientType == "legal"
                     ? z.cl.LegalPerson!.Name

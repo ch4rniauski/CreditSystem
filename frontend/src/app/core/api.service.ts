@@ -278,6 +278,7 @@ export interface PhysicalClientDto {
 }
 export interface ContractRow {
   id: number;
+  clientId: number;
   creditName: string;
   clientDisplay: string;
   clientType: string;

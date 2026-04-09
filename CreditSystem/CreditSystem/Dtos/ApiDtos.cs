@@ -80,6 +80,7 @@ public record PhysicalClientRow(
 
 public record ContractRow(
     int Id,
+    int ClientId,
     string CreditName,
     string ClientDisplay,
     string ClientType,
