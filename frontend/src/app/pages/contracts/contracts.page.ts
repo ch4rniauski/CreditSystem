@@ -21,6 +21,9 @@ export default class ContractsPage implements OnInit {
   readonly clientOptions = signal<{ id: number; kind: string; label: string }[]>([]);
   readonly viewedContract = signal<ContractDetailsDto | null>(null);
   readonly detailsLoading = signal(false);
+  readonly signCandidate = signal<ContractDetailsDto | null>(null);
+  readonly signLoading = signal(false);
+  readonly signing = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
@@ -154,11 +157,41 @@ export default class ContractsPage implements OnInit {
   }
 
   sign(c: ContractRow) {
-    if (!confirm(`Оформить договор «${c.creditName}» для ${c.clientDisplay}?`)) return;
-    this.api.signContract(c.id).subscribe({
-      next: () => this.reload(),
-      error: (e) => this.error.set(e.error ?? 'Ошибка'),
+    this.signLoading.set(true);
+    this.api.contractDetails(c.id).subscribe({
+      next: (details) => {
+        this.signCandidate.set(details);
+        this.signLoading.set(false);
+      },
+      error: (e) => {
+        this.signLoading.set(false);
+        this.error.set(typeof e.error === 'string' ? e.error : 'Не удалось загрузить финальные условия договора');
+      },
     });
+  }
+
+  confirmSign() {
+    const candidate = this.signCandidate();
+    if (!candidate) return;
+
+    this.signing.set(true);
+    this.api.signContract(candidate.id).subscribe({
+      next: () => {
+        this.signing.set(false);
+        this.closeSignModal();
+        this.reload();
+      },
+      error: (e) => {
+        this.signing.set(false);
+        this.error.set(typeof e.error === 'string' ? e.error : 'Ошибка');
+      },
+    });
+  }
+
+  closeSignModal() {
+    this.signCandidate.set(null);
+    this.signLoading.set(false);
+    this.signing.set(false);
   }
 
   remove(c: ContractRow) {

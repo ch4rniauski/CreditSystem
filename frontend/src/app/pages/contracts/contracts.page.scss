@@ -62,3 +62,15 @@
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 0.5rem 1rem;
       }
+
+      .confirm-text {
+        margin: 0 0 0.75rem;
+        font-weight: 600;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }

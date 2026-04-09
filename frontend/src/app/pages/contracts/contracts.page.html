@@ -101,3 +101,40 @@
         }
       </section>
     }
+
+    @if (signCandidate() || signLoading()) {
+      <div class="modal-backdrop" (click)="closeSignModal()"></div>
+      <section class="modal" role="dialog" aria-modal="true" aria-label="Подтверждение оформления">
+        <header class="modal-head">
+          <h2>Подтверждение оформления</h2>
+          <button type="button" (click)="closeSignModal()">Закрыть</button>
+        </header>
+
+        @if (signLoading()) {
+          <p>Загрузка финальных условий...</p>
+        }
+
+        @if (signCandidate(); as d) {
+          <p class="confirm-text">Заключаем договор на следующих условиях?</p>
+          <div class="details-grid">
+            <div><strong>Клиент:</strong> {{ clientDisplayWithPassport(d) }}</div>
+            <div><strong>Тип клиента:</strong> {{ clientTypeLabel(d.clientType) }}</div>
+            <div><strong>Продукт:</strong> {{ d.creditName }}</div>
+            <div><strong>Валюта:</strong> {{ d.currencyCode }}</div>
+            <div><strong>Сумма договора:</strong> {{ d.contractAmount }}</div>
+            <div><strong>Срок:</strong> {{ d.termMonths }} мес.</div>
+            <div><strong>Дата договора:</strong> {{ d.issueDate | date: 'dd.MM.yyyy' }}</div>
+            <div><strong>Ставка:</strong> {{ contractRateSummary(d) }}</div>
+            <div><strong>Штраф (досрочное):</strong> {{ d.fixedEarlyPenaltyX ?? 0 }}%</div>
+            <div><strong>Штраф (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}%</div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" (click)="closeSignModal()" [disabled]="signing()">Нет</button>
+            <button type="button" (click)="confirmSign()" [disabled]="signing()">
+              {{ signing() ? 'Оформление...' : 'Да, оформить договор' }}
+            </button>
+          </div>
+        }
+      </section>
+    }
