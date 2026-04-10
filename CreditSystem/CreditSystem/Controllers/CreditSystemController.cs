@@ -1183,13 +1183,95 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
 
     #region Payments
 
+    private static bool IsWeekend(DateOnly date)
+    {
+        return date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+    }
+
+    [HttpGet("contracts/{id:int}/payments/minimum")]
+    public async Task<ActionResult<PaymentMinimumDto>> GetMinimumPayment(int id, [FromQuery] DateOnly paymentDate,
+        CancellationToken ct)
+    {
+        if (IsWeekend(paymentDate))
+        {
+            return BadRequest("Платежи принимаются только в рабочие дни (понедельник-пятница).");
+        }
+
+        var contract = await db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (contract == null)
+        {
+            return NotFound();
+        }
+
+        if (contract.Status != StSigned)
+        {
+            return Conflict("Платежи только для «Оформлен».");
+        }
+
+        if (paymentDate < contract.IssueDate)
+        {
+            return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
+        }
+
+        var (rateOk, rateError, annualRate) =
+            await ResolveAnnualRateForContractAtDate(contract, paymentDate, ct);
+        if (!rateOk)
+        {
+            return BadRequest(rateError);
+        }
+
+        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate!.Value, contract.TermMonths,
+            contract.IssueDate);
+        var paidCount =
+            await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
+        if (paidCount >= contract.TermMonths)
+        {
+            return BadRequest("График закрыт.");
+        }
+
+        var line = schedule[(int)paidCount];
+        var lastPayDate = await db.Payments.AsNoTracking()
+            .Where(p => p.ContractId == id)
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(p => (DateOnly?)p.PaymentDate)
+            .FirstOrDefaultAsync(ct);
+
+        var accrualStart = lastPayDate is { } lp
+            ? lp.AddDays(1)
+            : LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
+        var days = Math.Max(1, paymentDate.DayNumber - accrualStart.DayNumber + 1);
+        var balance = contract.RemainingPrincipal;
+        var interest = decimal.Round(balance * annualRate.Value / 365m * days, 2, MidpointRounding.AwayFromZero);
+
+        var lateDays = paymentDate > line.PlannedPaymentDate
+            ? paymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
+            : 0;
+        var z = contract.FixedLatePenaltyZ ?? 0;
+        var latePenalty = lateDays > 0
+            ? decimal.Round((balance + interest) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
+            : 0m;
+
+        var minimum = decimal.Round(interest + latePenalty, 2, MidpointRounding.AwayFromZero);
+        return Ok(new PaymentMinimumDto(minimum, interest, latePenalty));
+    }
+
     [HttpPost("contracts/{id:int}/payments")]
     public async Task<ActionResult<int>> PostPayment(int id, [FromBody] PaymentCreateDto dto,
         CancellationToken ct)
     {
+        if (IsWeekend(dto.PaymentDate))
+        {
+            return BadRequest("Платежи принимаются только в рабочие дни (понедельник-пятница).");
+        }
+
         var contract = await db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null) return NotFound();
         if (contract.Status != StSigned) return Conflict("Платежи только для «Оформлен».");
+
+        if (dto.PaymentDate < contract.IssueDate)
+        {
+            return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
+        }
 
         var (rateOk, rateError, annualRate) =
             await ResolveAnnualRateForContractAtDate(contract, dto.PaymentDate, ct);

@@ -170,6 +170,8 @@ public record PledgeWriteDto(
 
 public record PaymentCreateDto(DateOnly PaymentDate, decimal TotalAmount);
 
+public record PaymentMinimumDto(decimal MinimumAmount, decimal InterestAmount, decimal LatePenaltyAmount);
+
 public record ExpectedPaymentsReportLineDto(int InstallmentNumber, DateOnly PlannedDate, decimal ExpectedPayment);
 
 public record CurrentDebtReportDto(

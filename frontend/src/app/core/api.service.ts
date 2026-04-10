@@ -148,6 +148,13 @@ export class ApiService {
     return this.http.post<number>(`${this.base}/contracts/${contractId}/payments`, body);
   }
 
+  paymentMinimum(contractId: number, paymentDate: string) {
+    const params = new HttpParams().set('paymentDate', paymentDate);
+    return this.http.get<PaymentMinimumDto>(`${this.base}/contracts/${contractId}/payments/minimum`, {
+      params,
+    });
+  }
+
   reportExpectedPayments(q: Report7Query) {
     let p = new HttpParams()
       .set('creditId', String(q.creditId))
@@ -364,6 +371,11 @@ export interface PledgeWriteDto {
 export interface PaymentCreateDto {
   paymentDate: string;
   totalAmount: number;
+}
+export interface PaymentMinimumDto {
+  minimumAmount: number;
+  interestAmount: number;
+  latePenaltyAmount: number;
 }
 export interface ExpectedPaymentsReportLineDto {
   installmentNumber: number;
