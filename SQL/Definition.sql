@@ -28,6 +28,10 @@ ALTER TABLE phys_persons
 ADD CONSTRAINT uq_phys_persons_passport
 UNIQUE (passport_series, passport_number);
 
+ALTER TABLE phys_persons
+ADD CONSTRAINT uq_phys_persons_phone
+UNIQUE (phone);
+
 CREATE TABLE credits (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

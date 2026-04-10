@@ -76,6 +76,8 @@ public static class ConstraintErrorHandler
                 return (true, "На одну и ту же дату уже существует штраф такого типа", "penalties");
             if (constraintName == "uq_phys_persons_passport")
                 return (true, "Клиент с такой серией и номером паспорта уже существует", "clients");
+            if (constraintName == "uq_phys_persons_phone")
+                return (true, "Физическое лицо с таким номером телефона уже существует", "clients");
         }
 
         // Penalty constraint errors
