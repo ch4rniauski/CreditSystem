@@ -20,14 +20,14 @@
             <option value="real_estate">Недвижимость</option>
             <option value="vehicle">Автотранспорт</option>
             <option value="equipment">Оборудование</option>
-                  <label
-                    >Валюта
-                    <select formControlName="currencyId">
-                      @for (c of currencies(); track c.id) {
-                        <option [value]="c.id">{{ c.code }}</option>
-                      }
-                    </select>
-                  </label>
+          </select>
+        </label>
+        <label>
+          Валюта
+          <select formControlName="currencyId">
+            @for (c of currencies(); track c.id) {
+              <option [value]="c.id">{{ c.code }}</option>
+            }
           </select>
         </label>
         <button type="submit" [disabled]="form.invalid || selectedContractId() === 0">Добавить</button>
@@ -44,7 +44,7 @@
           <th>Имущество</th>
           <th>Стоимость</th>
           <th>Тип</th>
-                    <th>Валюта</th>
+          <th>Валюта</th>
           <th>Действие</th>
         </tr>
       </thead>

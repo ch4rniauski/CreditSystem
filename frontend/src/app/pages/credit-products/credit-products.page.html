@@ -134,7 +134,7 @@
               <tr>
                 <td>{{ r.currencyCode }}</td>
                 <td>{{ r.termFromMonths }}–{{ r.termToMonths }}</td>
-                <td>{{ r.rateType }}</td>
+                <td>{{ rateTypeLabel(r.rateType) }}</td>
                 <td>
                   {{ r.rateType === 'fixed' ? r.rateValue : r.additivePercent }}
                 </td>

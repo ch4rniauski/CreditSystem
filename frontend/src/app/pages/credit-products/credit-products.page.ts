@@ -440,4 +440,10 @@ export default class CreditProductsPage implements OnInit {
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }
+
+  rateTypeLabel(type: string): string {
+    if (type === 'fixed') return 'Фиксированная';
+    if (type === 'floating') return 'Плавающая';
+    return type;
+  }
 }

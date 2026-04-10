@@ -15,7 +15,7 @@ export default class PledgesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly draftContracts = signal<ContractRow[]>([]);
-    readonly currencies = signal<CurrencyRow[]>([]);
+  readonly currencies = signal<CurrencyRow[]>([]);
   readonly selectedContractId = signal(0);
   readonly pledges = signal<PledgeRow[]>([]);
   readonly error = signal<string | null>(null);
@@ -29,11 +29,11 @@ export default class PledgesPage implements OnInit {
   });
 
   ngOnInit() {
-        this.api.currencies().subscribe((c) => {
-          this.currencies.set(c);
-          const first = c[0]?.id ?? 0;
-          if (first) this.form.patchValue({ currencyId: first });
-        });
+    this.api.currencies().subscribe((c) => {
+      this.currencies.set(c);
+      const first = c[0]?.id ?? 0;
+      if (first) this.form.patchValue({ currencyId: first });
+    });
 
     this.api.contracts().subscribe((list) => {
       const drafts = list.filter((c) => c.status === 'Оформляется');
@@ -63,7 +63,7 @@ export default class PledgesPage implements OnInit {
           estimatedValue: 1,
           assessmentDate: '',
           propertyType: 'real_estate',
-                  currencyId: this.currencies()[0]?.id ?? 0,
+          currencyId: this.currencies()[0]?.id ?? 0,
         });
         this.loadPledges(cid);
       },
@@ -81,13 +81,14 @@ export default class PledgesPage implements OnInit {
   }
 
   pledgeTypeLabel(value: string): string {
-          const labels: { [key: string]: string } = {
-            real_estate: 'Недвижимость',
-            vehicle: 'Автотранспорт',
-            equipment: 'Оборудование',
-          };
-          return labels[value] ?? value;
-        }
+    const labels: { [key: string]: string } = {
+      real_estate: 'Недвижимость',
+      vehicle: 'Автотранспорт',
+      equipment: 'Оборудование',
+    };
+
+    return labels[value] ?? value;
+  }
 
   contractClientLabel(c: ContractRow): string {
     if (c.clientPassportSeries && c.clientPassportNumber) {
@@ -96,3 +97,4 @@ export default class PledgesPage implements OnInit {
 
     return c.clientDisplay;
   }
+}
