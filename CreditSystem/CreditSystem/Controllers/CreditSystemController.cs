@@ -866,10 +866,27 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
                 z.x.c.FixedAdditivePercent,
                 z.x.c.FixedEarlyPenaltyX,
                 z.x.c.FixedLatePenaltyZ,
-                z.x.c.RemainingPrincipal))
+                z.x.c.RemainingPrincipal,
+                Array.Empty<GuarantorRow>(),
+                Array.Empty<PledgeRow>()))
             .FirstOrDefaultAsync(ct);
 
         if (row == null) return NotFound();
+
+        var guarantors = await db.Guarantors.AsNoTracking()
+            .Where(g => g.ContractId == id)
+            .Join(db.PhysPersons.AsNoTracking(), g => g.PhysPersonId, p => p.ClientId,
+                (g, p) => new GuarantorRow(g.Id, row.CreditName, p.FullName, p.PassportSeries, p.PassportNumber))
+            .ToListAsync(ct);
+
+        var pledges = await db.Pledges.AsNoTracking()
+            .Where(p => p.ContractId == id)
+            .Join(db.Currencies.AsNoTracking(), p => p.CurrencyId, cu => cu.Id, (p, cu) => new { p, cu })
+            .Select(x => new PledgeRow(x.p.Id, x.p.PropertyName, x.p.EstimatedValue, x.p.AssessmentDate,
+                x.p.PropertyType, x.cu.Code))
+            .ToListAsync(ct);
+
+        row = row with { Guarantors = guarantors.ToArray(), Pledges = pledges.ToArray() };
         return Ok(row);
     }
 
@@ -1064,8 +1081,9 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<List<PledgeRow>>> GetPledges(int contractId, CancellationToken ct)
     {
         var list = await db.Pledges.AsNoTracking()
-            .Where(p => p.ContractId == contractId)
-            .Select(p => new PledgeRow(p.Id, p.PropertyName, p.EstimatedValue, p.AssessmentDate, p.PropertyType))
+            .Join(db.Currencies.AsNoTracking(), p => p.CurrencyId, cu => cu.Id, (p, cu) => new { p, cu })
+            .Where(x => x.p.ContractId == contractId)
+            .Select(x => new PledgeRow(x.p.Id, x.p.PropertyName, x.p.EstimatedValue, x.p.AssessmentDate, x.p.PropertyType, x.cu.Code))
             .ToListAsync(ct);
         return Ok(list);
     }
@@ -1077,9 +1095,12 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var c = await db.Contracts.FindAsync([contractId], ct);
         if (c == null) return NotFound();
         if (c.Status != StDraft) return Conflict();
+        if (!await db.Currencies.AsNoTracking().AnyAsync(x => x.Id == dto.CurrencyId, ct))
+            return BadRequest("Валюта не найдена");
         var p = new Pledge
         {
             ContractId = contractId,
+            CurrencyId = dto.CurrencyId,
             PropertyName = dto.PropertyName,
             EstimatedValue = dto.EstimatedValue,
             AssessmentDate = dto.AssessmentDate,

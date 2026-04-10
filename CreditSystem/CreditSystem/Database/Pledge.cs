@@ -1,10 +1,15 @@
-﻿namespace CreditSystem.Database;
+﻿using System;
+using System.Collections.Generic;
+
+namespace CreditSystem.Database;
 
 public partial class Pledge
 {
     public int Id { get; set; }
 
     public int? ContractId { get; set; }
+
+    public int CurrencyId { get; set; }
 
     public string PropertyName { get; set; } = null!;
 
@@ -15,4 +20,6 @@ public partial class Pledge
     public string PropertyType { get; set; } = null!;
 
     public virtual Contract? Contract { get; set; }
+
+    public virtual Currency Currency { get; set; } = null!;
 }

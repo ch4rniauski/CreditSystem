@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 namespace CreditSystem.Database;
 
@@ -50,8 +52,6 @@ public partial class CreditSystemContext : DbContext
     public virtual DbSet<RatesHistory> RatesHistories { get; set; }
 
     public virtual DbSet<RefinanceRate> RefinanceRates { get; set; }
-
-    public virtual DbSet<WorkingDay> WorkingDays { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -417,6 +417,8 @@ public partial class CreditSystemContext : DbContext
 
             entity.HasIndex(e => new { e.PassportSeries, e.PassportNumber }, "uq_phys_persons_passport").IsUnique();
 
+            entity.HasIndex(e => e.Phone, "uq_phys_persons_phone").IsUnique();
+
             entity.Property(e => e.ClientId)
                 .ValueGeneratedNever()
                 .HasColumnName("client_id");
@@ -448,6 +450,7 @@ public partial class CreditSystemContext : DbContext
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.AssessmentDate).HasColumnName("assessment_date");
             entity.Property(e => e.ContractId).HasColumnName("contract_id");
+            entity.Property(e => e.CurrencyId).HasColumnName("currency_id");
             entity.Property(e => e.EstimatedValue)
                 .HasPrecision(15, 2)
                 .HasColumnName("estimated_value");
@@ -461,6 +464,11 @@ public partial class CreditSystemContext : DbContext
             entity.HasOne(d => d.Contract).WithMany(p => p.Pledges)
                 .HasForeignKey(d => d.ContractId)
                 .HasConstraintName("pledges_contract_id_fkey");
+
+            entity.HasOne(d => d.Currency).WithMany(p => p.Pledges)
+                .HasForeignKey(d => d.CurrencyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("pledges_currency_id_fkey");
         });
 
         modelBuilder.Entity<RatesHistory>(entity =>
@@ -505,25 +513,6 @@ public partial class CreditSystemContext : DbContext
                 .HasColumnName("rate_percent");
             entity.Property(e => e.ValidFromDate).HasColumnName("valid_from_date");
             entity.Property(e => e.ValidToDate).HasColumnName("valid_to_date");
-        });
-
-        modelBuilder.Entity<WorkingDay>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("working_days_pkey");
-
-            entity.ToTable("working_days");
-
-            entity.HasIndex(e => e.WorkDate, "working_days_work_date_key").IsUnique();
-
-            entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.DayType)
-                .HasMaxLength(20)
-                .HasColumnName("day_type");
-            entity.Property(e => e.HolidayName)
-                .HasMaxLength(100)
-                .HasColumnName("holiday_name");
-            entity.Property(e => e.IsWorkingDay).HasColumnName("is_working_day");
-            entity.Property(e => e.WorkDate).HasColumnName("work_date");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -315,6 +315,8 @@ export interface ContractDetailsDto {
   fixedAdditivePercent: number | null;
   fixedEarlyPenaltyX: number | null;
   fixedLatePenaltyZ: number | null;
+    guarantors: GuarantorRow[];
+    pledges: PledgeRow[];
   remainingPrincipal: number;
 }
 export interface ContractCreateDto {
@@ -350,8 +352,10 @@ export interface PledgeRow {
   estimatedValue: number;
   assessmentDate: string;
   propertyType: string;
+  currencyCode: string | null;
 }
 export interface PledgeWriteDto {
+    currencyId: number;
   propertyName: string;
   estimatedValue: number;
   assessmentDate: string;

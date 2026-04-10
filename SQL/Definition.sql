@@ -256,6 +256,7 @@ UNIQUE (contract_id, phys_person_id);
 CREATE TABLE pledges (
     id SERIAL PRIMARY KEY,
     contract_id INTEGER REFERENCES contracts(id),
+    currency_id INTEGER NOT NULL REFERENCES currencies(id),
     property_name VARCHAR(255) NOT NULL,
     estimated_value DECIMAL(15,2) NOT NULL,
     assessment_date DATE NOT NULL,
@@ -289,15 +290,3 @@ CREATE TABLE penalties_history (
     old_value DECIMAL(5,4),
     new_value DECIMAL(5,4) NOT NULL
 );
-
-CREATE TABLE working_days (
-    id SERIAL PRIMARY KEY,
-    work_date DATE UNIQUE NOT NULL,
-    is_working_day BOOLEAN NOT NULL,
-    day_type VARCHAR(20) NOT NULL,
-    holiday_name VARCHAR(100)
-);
-
-ALTER TABLE working_days 
-ADD CONSTRAINT chk_working_days_type 
-CHECK (day_type IN ('working', 'weekend', 'holiday'));

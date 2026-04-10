@@ -246,4 +246,14 @@ export default class ContractsPage implements OnInit {
   clientTypeLabel(value: string): string {
     return value === 'legal' ? 'Юридическое лицо' : 'Физическое лицо';
   }
+
+  pledgeTypeLabel(value: string): string {
+    const labels: { [key: string]: string } = {
+      real_estate: 'Недвижимость',
+      vehicle: 'Автотранспорт',
+      equipment: 'Оборудование',
+    };
+
+    return labels[value] ?? value;
+  }
 }

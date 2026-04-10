@@ -5,7 +5,7 @@
         >Договор
         <select [value]="selectedContractId()" (change)="pickContract(+$any($event.target).value)">
           @for (c of draftContracts(); track c.id) {
-            <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }}</option>
+            <option [value]="c.id">{{ c.creditName }} — {{ contractClientLabel(c) }}</option>
           }
         </select>
       </label>
@@ -20,6 +20,14 @@
             <option value="real_estate">Недвижимость</option>
             <option value="vehicle">Автотранспорт</option>
             <option value="equipment">Оборудование</option>
+                  <label
+                    >Валюта
+                    <select formControlName="currencyId">
+                      @for (c of currencies(); track c.id) {
+                        <option [value]="c.id">{{ c.code }}</option>
+                      }
+                    </select>
+                  </label>
           </select>
         </label>
         <button type="submit" [disabled]="form.invalid || selectedContractId() === 0">Добавить</button>
@@ -36,6 +44,7 @@
           <th>Имущество</th>
           <th>Стоимость</th>
           <th>Тип</th>
+                    <th>Валюта</th>
           <th>Действие</th>
         </tr>
       </thead>
@@ -44,7 +53,8 @@
           <tr>
             <td>{{ p.propertyName }}</td>
             <td>{{ p.estimatedValue }}</td>
-            <td>{{ p.propertyType }}</td>
+            <td>{{ pledgeTypeLabel(p.propertyType) }}</td>
+            <td>{{ p.currencyCode }}</td>
             <td><button type="button" (click)="remove(p)">Удалить</button></td>
           </tr>
         }

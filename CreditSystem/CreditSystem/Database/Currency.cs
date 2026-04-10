@@ -1,4 +1,7 @@
-﻿namespace CreditSystem.Database;
+﻿using System;
+using System.Collections.Generic;
+
+namespace CreditSystem.Database;
 
 public partial class Currency
 {
@@ -13,4 +16,6 @@ public partial class Currency
     public virtual ICollection<CreditCurrency> CreditCurrencies { get; set; } = new List<CreditCurrency>();
 
     public virtual ICollection<InterestRate> InterestRates { get; set; } = new List<InterestRate>();
+
+    public virtual ICollection<Pledge> Pledges { get; set; } = new List<Pledge>();
 }

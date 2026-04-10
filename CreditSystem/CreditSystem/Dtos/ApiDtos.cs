@@ -114,7 +114,9 @@ public record ContractDetailsDto(
     decimal? FixedAdditivePercent,
     decimal? FixedEarlyPenaltyX,
     decimal? FixedLatePenaltyZ,
-    decimal RemainingPrincipal);
+    decimal RemainingPrincipal,
+    GuarantorRow[] Guarantors,
+    PledgeRow[] Pledges);
 
 public record ContractDraftDto(
     string CreditProductName,
@@ -156,13 +158,15 @@ public record PledgeRow(
     string PropertyName,
     decimal EstimatedValue,
     DateOnly AssessmentDate,
-    string PropertyType);
+    string PropertyType,
+    string? CurrencyCode);
 
 public record PledgeWriteDto(
     string PropertyName,
     decimal EstimatedValue,
     DateOnly AssessmentDate,
-    string PropertyType);
+    string PropertyType,
+    int CurrencyId);
 
 public record PaymentCreateDto(DateOnly PaymentDate, decimal TotalAmount);
 
