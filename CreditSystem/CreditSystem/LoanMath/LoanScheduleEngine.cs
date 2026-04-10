@@ -1,7 +1,7 @@
 namespace CreditSystem.LoanMath;
 
 /// <summary>
-/// Annuity schedule: daily interest (annual/365) on remaining principal; payment on last working day of each month.
+/// Annuity schedule: daily interest (annual/365) on remaining principal; payment on last weekday (Mon-Fri) of each month.
 /// First accrual day = first day of month after issue month.
 /// </summary>
 public static class LoanScheduleEngine
@@ -28,36 +28,16 @@ public static class LoanScheduleEngine
         return LastCalendarWeekdayOfMonth(monthAnchor);
     }
 
-    /// <param name="datesWithRow">Dates that exist in working_days table (any day_type).</param>
-    /// <param name="workingDates">Subset where is_working_day is true.</param>
-    public static DateOnly LastWorkingDayOfMonth(
-        DateOnly anyDayInMonth,
-        IReadOnlySet<DateOnly> datesWithRow,
-        IReadOnlySet<DateOnly> workingDates)
+    public static DateOnly LastWorkingDayOfMonth(DateOnly anyDayInMonth)
     {
         var y = anyDayInMonth.Year;
         var m = anyDayInMonth.Month;
         var first = new DateOnly(y, m, 1);
         var last = new DateOnly(y, m, DateTime.DaysInMonth(y, m));
 
-        var monthHasData = false;
-        for (var d = first; d <= last; d = d.AddDays(1))
-        {
-            if (datesWithRow.Contains(d))
-            {
-                monthHasData = true;
-                break;
-            }
-        }
-
         for (var d = last; d >= first; d = d.AddDays(-1))
         {
-            if (monthHasData)
-            {
-                if (workingDates.Contains(d))
-                    return d;
-            }
-            else if (IsWeekday(d))
+            if (IsWeekday(d))
             {
                 return d;
             }
@@ -87,9 +67,7 @@ public static class LoanScheduleEngine
         decimal principal,
         decimal annualRate,
         int termMonths,
-        DateOnly issueDate,
-        IReadOnlySet<DateOnly> datesWithRow,
-        IReadOnlySet<DateOnly> workingDates)
+        DateOnly issueDate)
     {
         if (principal <= 0 || termMonths <= 0)
             return Array.Empty<ScheduleLine>();
@@ -102,7 +80,7 @@ public static class LoanScheduleEngine
             for (var i = 0; i < termMonths; i++)
             {
                 var anchor = FirstAccrualDate(issueDate).AddMonths(i);
-                var payDate = LastWorkingDayOfMonth(anchor, datesWithRow, workingDates);
+                var payDate = LastWorkingDayOfMonth(anchor);
 
                 var accrualStart = i == 0
                     ? FirstAccrualDate(issueDate)
@@ -153,7 +131,7 @@ public static class LoanScheduleEngine
         for (var i = 0; i < termMonths; i++)
         {
             var anchor = FirstAccrualDate(issueDate).AddMonths(i);
-            var payDate = LastWorkingDayOfMonth(anchor, datesWithRow, workingDates);
+            var payDate = LastWorkingDayOfMonth(anchor);
 
             var accrualStart = i == 0 ? FirstAccrualDate(issueDate) : prev!.Value.AddDays(1);
             var days = Math.Max(1, payDate.DayNumber - accrualStart.DayNumber + 1);

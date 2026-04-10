@@ -21,26 +21,14 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             ? c.LegalPerson?.Name ?? "—"
             : c.PhysPerson?.FullName ?? "—";
 
-    private async Task<(HashSet<DateOnly> datesWithRow, HashSet<DateOnly> workingDates)> LoadWorkingSets(
-        CancellationToken ct)
-    {
-        var rows = await db.WorkingDays.AsNoTracking().ToListAsync(ct);
-        var all = rows.Select(r => r.WorkDate).ToHashSet();
-        var working = rows.Where(r => r.IsWorkingDay).Select(r => r.WorkDate).ToHashSet();
-        return (all, working);
-    }
-
-    private IReadOnlyList<LoanScheduleEngine.ScheduleLine> ScheduleFor(Contract c,
-        HashSet<DateOnly> datesWithRow, HashSet<DateOnly> workingDates)
+    private IReadOnlyList<LoanScheduleEngine.ScheduleLine> ScheduleFor(Contract c)
     {
         var rate = c.FixedInterestRate ?? 0;
         return LoanScheduleEngine.BuildSchedule(
             c.ContractAmount,
             rate,
             c.TermMonths,
-            c.IssueDate,
-            datesWithRow,
-            workingDates);
+            c.IssueDate);
     }
 
     #region Currencies
@@ -1149,9 +1137,8 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (contract.Status != StSigned) return Conflict("Платежи только для «Оформлен».");
         if (contract.FixedInterestRate is not { } annualRate) return BadRequest("Нет ставки.");
 
-        var (datesWithRow, workingDates) = await LoadWorkingSets(ct);
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate, contract.TermMonths,
-            contract.IssueDate, datesWithRow, workingDates);
+            contract.IssueDate);
         var paidCount =
             await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
         if (paidCount >= contract.TermMonths) return BadRequest("График закрыт.");
@@ -1241,9 +1228,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var (ok, err, terms) = await TryResolveTerms(creditId, currencyId, termMonths, issueDate, ct);
         if (!ok) return BadRequest(err);
         var annual = terms!.Annual;
-        var (datesWithRow, workingDates) = await LoadWorkingSets(ct);
-        var schedule = LoanScheduleEngine.BuildSchedule(contractAmount, annual, termMonths, issueDate, datesWithRow,
-            workingDates);
+        var schedule = LoanScheduleEngine.BuildSchedule(contractAmount, annual, termMonths, issueDate);
         var list = schedule.Select(l => new ExpectedPaymentsReportLineDto(l.InstallmentIndex + 1, l.PlannedPaymentDate,
             l.ScheduledTotalPayment)).ToList();
         return Ok(list);
@@ -1257,9 +1242,8 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (contract.Status == StDraft) return BadRequest("Договор ещё не оформлен.");
 
         var annual = contract.FixedInterestRate ?? 0;
-        var (datesWithRow, workingDates) = await LoadWorkingSets(ct);
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual, contract.TermMonths,
-            contract.IssueDate, datesWithRow, workingDates);
+            contract.IssueDate);
 
         var lastPayDate = await db.Payments.AsNoTracking()
             .Where(p => p.ContractId == id)
@@ -1302,9 +1286,8 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var contract = await db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null) return NotFound();
         var annual = contract.FixedInterestRate ?? 0;
-        var (datesWithRow, workingDates) = await LoadWorkingSets(ct);
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual, contract.TermMonths,
-            contract.IssueDate, datesWithRow, workingDates);
+            contract.IssueDate);
 
         var payments = await db.Payments.AsNoTracking()
             .Where(p => p.ContractId == id && p.PaymentType == "monthly")
