@@ -28,7 +28,12 @@
         <label>Сумма <input type="number" formControlName="contractAmount" /></label>
         <label>Срок (мес.) <input type="number" formControlName="termMonths" /></label>
         <label>Дата договора <input type="date" formControlName="issueDate" /></label>
-        <button type="submit" [disabled]="form.invalid">Создать черновик</button>
+        <button type="submit" [disabled]="form.invalid">
+          {{ editingContractId() === null ? 'Создать черновик' : 'Сохранить изменения' }}
+        </button>
+        @if (editingContractId() !== null) {
+          <button type="button" (click)="cancelEdit()">Отмена</button>
+        }
       </form>
 
       @if (error()) {
@@ -62,6 +67,7 @@
             <td>
               <button type="button" (click)="openDetails(c)">Просмотр</button>
               @if (c.status === 'Оформляется') {
+                <button type="button" (click)="edit(c)">Изменить</button>
                 <button type="button" (click)="sign(c)">Оформить</button>
                 <button type="button" (click)="remove(c)">Удалить</button>
               }

@@ -28,6 +28,7 @@ export default class ContractsPage implements OnInit, OnDestroy {
   readonly signCandidate = signal<ContractDetailsDto | null>(null);
   readonly signLoading = signal(false);
   readonly signing = signal(false);
+  readonly editingContractId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
 
   private readonly syncBodyScrollLock = effect(() => {
@@ -67,7 +68,9 @@ export default class ContractsPage implements OnInit, OnDestroy {
     });
 
     this.form.get('creditId')?.valueChanges.subscribe((creditId) => {
-      if (creditId) this.loadCreditConstraints(Number(creditId));
+      if (creditId) {
+        this.loadCreditConstraints(Number(creditId));
+      }
     });
 
     this.api.legalClients().subscribe((legals) => {
@@ -96,9 +99,11 @@ export default class ContractsPage implements OnInit, OnDestroy {
     });
   }
 
-  private loadCreditConstraints(creditId: number) {
+  private loadCreditConstraints(creditId: number, preferredCurrencyId?: number) {
     const credit = this.credits().find((c) => c.id === creditId);
-    if (!credit) return;
+    if (!credit) {
+      return;
+    }
 
     this.form.controls.contractAmount.setValidators([
       Validators.required,
@@ -125,9 +130,14 @@ export default class ContractsPage implements OnInit, OnDestroy {
       const available = this.currencies().filter((c) => matchedIds.includes(c.id));
       this.availableCurrencies.set(available.length ? available : this.currencies());
 
-      if (!available.some((c) => c.id === this.form.controls.currencyId.value)) {
+      const targetCurrencyId = preferredCurrencyId ?? this.form.controls.currencyId.value;
+      if (!available.some((c) => c.id === targetCurrencyId)) {
         const first = available[0]?.id ?? this.currencies()[0]?.id ?? 0;
-        if (first) this.form.patchValue({ currencyId: first });
+        if (first) {
+          this.form.patchValue({ currencyId: first });
+        }
+      } else if (targetCurrencyId) {
+        this.form.patchValue({ currencyId: targetCurrencyId });
       }
     });
   }
@@ -152,23 +162,52 @@ export default class ContractsPage implements OnInit, OnDestroy {
       return;
     }
 
-    this.api
-      .createContract({
-        clientId: Number(v.clientId),
-        creditId: Number(v.creditId),
-        currencyId: Number(v.currencyId),
-        contractAmount: v.contractAmount,
-        termMonths: v.termMonths,
-        issueDate: v.issueDate,
-      })
-      .subscribe({
-        next: () => {
-          this.reload();
-          this.error.set(null);
-        },
-        error: (e) =>
-          this.error.set(typeof e.error === 'string' ? e.error : JSON.stringify(e.error?.errors ?? e.error)),
-      });
+    const payload = {
+      clientId: Number(v.clientId),
+      creditId: Number(v.creditId),
+      currencyId: Number(v.currencyId),
+      contractAmount: v.contractAmount,
+      termMonths: v.termMonths,
+      issueDate: v.issueDate,
+    };
+    const editingId = this.editingContractId();
+    const request$ = editingId === null
+      ? this.api.createContract(payload)
+      : this.api.updateContract(editingId, payload);
+
+    request$.subscribe({
+      next: () => {
+        this.reload();
+        this.cancelEdit();
+        this.error.set(null);
+      },
+      error: (e) =>
+        this.error.set(typeof e.error === 'string' ? e.error : JSON.stringify(e.error?.errors ?? e.error)),
+    });
+  }
+
+  edit(c: ContractRow) {
+    this.api.contractDetails(c.id).subscribe({
+      next: (d) => {
+        this.editingContractId.set(c.id);
+        this.form.patchValue({
+          clientId: d.clientId,
+          creditId: d.creditId,
+          contractAmount: d.contractAmount,
+          termMonths: d.termMonths,
+          issueDate: d.issueDate,
+        });
+        this.loadCreditConstraints(d.creditId, d.currencyId);
+        this.error.set(null);
+      },
+      error: (e) => {
+        this.error.set(typeof e.error === 'string' ? e.error : 'Не удалось загрузить договор для редактирования');
+      },
+    });
+  }
+
+  cancelEdit() {
+    this.editingContractId.set(null);
   }
 
   sign(c: ContractRow) {
