@@ -19,6 +19,8 @@ public partial class Payment
 
     public decimal InterestAmount { get; set; }
 
+    public decimal AppliedAnnualRate { get; set; }
+
     public decimal? EarlyPenalty { get; set; }
 
     public decimal? LatePenalty { get; set; }

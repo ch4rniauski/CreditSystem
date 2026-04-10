@@ -213,6 +213,7 @@ CREATE TABLE payments (
     payment_type VARCHAR(20) NOT NULL,
     principal_amount DECIMAL(15,2) NOT NULL,
     interest_amount DECIMAL(15,2) NOT NULL,
+    applied_annual_rate DECIMAL(10,4) NOT NULL,
     early_penalty DECIMAL(15,2) DEFAULT 0,
     late_penalty DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) NOT NULL,
@@ -230,6 +231,10 @@ CHECK (principal_amount >= 0);
 ALTER TABLE payments 
 ADD CONSTRAINT chk_payments_interest 
 CHECK (interest_amount >= 0);
+
+ALTER TABLE payments
+ADD CONSTRAINT chk_payments_applied_annual_rate
+CHECK (applied_annual_rate >= 0);
 
 ALTER TABLE payments 
 ADD CONSTRAINT chk_payments_early_penalty 

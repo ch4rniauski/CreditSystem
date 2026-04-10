@@ -89,6 +89,9 @@ public static class ConstraintErrorHandler
         if (constraintName == "chk_penalties_chronological_order")
             return (true, "Новый штраф должен иметь дату не раньше существующих штрафов", "penalties");
 
+        if (constraintName == "chk_payments_applied_annual_rate")
+            return (true, "Примененная процентная ставка в платеже не может быть отрицательной", "payments");
+
         if (pgEx.SqlState == "22003")
         {
             if (pgEx.TableName == "interest_rates")

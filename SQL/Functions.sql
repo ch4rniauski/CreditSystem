@@ -220,6 +220,7 @@ BEGIN
         payment_type,
         principal_amount,
         interest_amount,
+        applied_annual_rate,
         total_amount,
         remaining_after_payment
     )
@@ -230,6 +231,7 @@ BEGIN
         'monthly',
         p_payment - v_interest,
         v_interest,
+        v_rate,
         p_payment,
         v_remain
     );

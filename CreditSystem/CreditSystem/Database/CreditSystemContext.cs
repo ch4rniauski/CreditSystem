@@ -320,6 +320,9 @@ public partial class CreditSystemContext : DbContext
             entity.ToTable("payments");
 
             entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.AppliedAnnualRate)
+                .HasPrecision(10, 4)
+                .HasColumnName("applied_annual_rate");
             entity.Property(e => e.ContractId).HasColumnName("contract_id");
             entity.Property(e => e.EarlyPenalty)
                 .HasPrecision(15, 2)

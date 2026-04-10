@@ -729,6 +729,40 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             .OrderByDescending(r => r.ValidFromDate)
             .FirstOrDefaultAsync(ct);
 
+    private async Task<(bool Ok, string? Error, decimal? Annual)> ResolveAnnualRateForContractAtDate(
+        Contract contract,
+        DateOnly date,
+        CancellationToken ct)
+    {
+        if (contract.RateType == "fixed")
+        {
+            if (contract.FixedInterestRate is not { } fixedAnnual)
+            {
+                return (false, "Нет ставки по договору.", null);
+            }
+
+            return (true, null, fixedAnnual);
+        }
+
+        if (contract.RateType != "floating")
+        {
+            return (false, "Некорректный тип ставки в договоре.", null);
+        }
+
+        if (contract.FixedAdditivePercent is not { } additive)
+        {
+            return (false, "Для плавающей ставки не задана добавка.", null);
+        }
+
+        var refinance = await ResolveRefinance(date, ct);
+        if (refinance == null)
+        {
+            return (false, "Не найдена ставка рефинансирования НБРБ на дату расчета.", null);
+        }
+
+        return (true, null, refinance.RatePercent + additive);
+    }
+
     private async Task<(decimal? early, decimal? late)> ResolvePenaltiesAtIssue(int creditId, DateOnly issueDate,
         CancellationToken ct)
     {
@@ -1156,9 +1190,15 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var contract = await db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null) return NotFound();
         if (contract.Status != StSigned) return Conflict("Платежи только для «Оформлен».");
-        if (contract.FixedInterestRate is not { } annualRate) return BadRequest("Нет ставки.");
 
-        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate, contract.TermMonths,
+        var (rateOk, rateError, annualRate) =
+            await ResolveAnnualRateForContractAtDate(contract, dto.PaymentDate, ct);
+        if (!rateOk)
+        {
+            return BadRequest(rateError);
+        }
+
+        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate!.Value, contract.TermMonths,
             contract.IssueDate);
         var paidCount =
             await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
@@ -1176,7 +1216,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             : LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
         var days = Math.Max(1, dto.PaymentDate.DayNumber - accrualStart.DayNumber + 1);
         var balance = contract.RemainingPrincipal;
-        var interest = decimal.Round(balance * annualRate / 365m * days, 2, MidpointRounding.AwayFromZero);
+        var interest = decimal.Round(balance * annualRate.Value / 365m * days, 2, MidpointRounding.AwayFromZero);
 
         var lateDays = dto.PaymentDate > line.PlannedPaymentDate
             ? dto.PaymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
@@ -1207,6 +1247,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             PaymentType = "monthly",
             PrincipalAmount = principalPaid,
             InterestAmount = interest,
+            AppliedAnnualRate = annualRate.Value,
             EarlyPenalty = earlyPenalty,
             LatePenalty = latePenalty,
             TotalAmount = dto.TotalAmount,
@@ -1262,8 +1303,14 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (contract == null) return NotFound();
         if (contract.Status == StDraft) return BadRequest("Договор ещё не оформлен.");
 
-        var annual = contract.FixedInterestRate ?? 0;
-        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual, contract.TermMonths,
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var (rateOk, rateError, annual) = await ResolveAnnualRateForContractAtDate(contract, today, ct);
+        if (!rateOk)
+        {
+            return BadRequest(rateError);
+        }
+
+        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual!.Value, contract.TermMonths,
             contract.IssueDate);
 
         var lastPayDate = await db.Payments.AsNoTracking()
@@ -1271,13 +1318,12 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             .OrderByDescending(p => p.PaymentDate)
             .Select(p => (DateOnly?)p.PaymentDate)
             .FirstOrDefaultAsync(ct);
-        var today = DateOnly.FromDateTime(DateTime.Today);
 
         var accrualStart = lastPayDate is { } lp
             ? lp.AddDays(1)
             : LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
         var days = Math.Max(1, today.DayNumber - accrualStart.DayNumber + 1);
-        var interestDue = decimal.Round(contract.RemainingPrincipal * annual / 365m * days, 2,
+        var interestDue = decimal.Round(contract.RemainingPrincipal * annual.Value / 365m * days, 2,
             MidpointRounding.AwayFromZero);
 
         var paidCount =
