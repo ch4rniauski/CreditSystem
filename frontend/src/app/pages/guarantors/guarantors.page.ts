@@ -82,7 +82,10 @@ export default class GuarantorsPage implements OnInit {
   remove(g: GuarantorRow) {
     if (!confirm('Удалить поручителя?')) return;
     this.api.deleteGuarantor(g.internalId).subscribe({
-      next: () => this.reload(),
+      next: () => {
+        this.error.set(null);
+        this.reload();
+      },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }

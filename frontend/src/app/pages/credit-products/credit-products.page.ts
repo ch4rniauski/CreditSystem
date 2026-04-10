@@ -334,7 +334,10 @@ export default class CreditProductsPage implements OnInit {
     const cid = this.currencyIdByCode(currencyCode);
     if (pid === null || cid === null) return;
     this.api.deleteCreditCurrency(pid, cid).subscribe({
-      next: () => this.reloadDetails(),
+      next: () => {
+        this.error.set(null);
+        this.reloadDetails();
+      },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }
@@ -400,7 +403,10 @@ export default class CreditProductsPage implements OnInit {
   deleteRate(r: InterestRateRow) {
     if (!confirm('Удалить процентную ставку?')) return;
     this.api.deleteInterestRate(r.id).subscribe({
-      next: () => this.reloadDetails(),
+      next: () => {
+        this.error.set(null);
+        this.reloadDetails();
+      },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }
@@ -436,7 +442,10 @@ export default class CreditProductsPage implements OnInit {
   deletePenalty(p: PenaltyRow) {
     if (!confirm('Удалить штраф?')) return;
     this.api.deletePenalty(p.id).subscribe({
-      next: () => this.reloadDetails(),
+      next: () => {
+        this.error.set(null);
+        this.reloadDetails();
+      },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }

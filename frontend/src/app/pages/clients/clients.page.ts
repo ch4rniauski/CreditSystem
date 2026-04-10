@@ -68,6 +68,7 @@ export default class ClientsPage implements OnInit {
       this.api.createLegalClient(v).subscribe({
         next: () => {
           this.cancelLegal();
+          this.error.set(null);
           this.reload();
         },
         error: (e) => this.error.set(e.error ?? 'Ошибка'),
@@ -76,6 +77,7 @@ export default class ClientsPage implements OnInit {
       this.api.updateLegalClient(id, v).subscribe({
         next: () => {
           this.cancelLegal();
+          this.error.set(null);
           this.reload();
         },
         error: (e) => this.error.set(e.error ?? 'Ошибка'),
@@ -107,6 +109,7 @@ export default class ClientsPage implements OnInit {
       this.api.createPhysicalClient(v).subscribe({
         next: () => {
           this.cancelPhys();
+          this.error.set(null);
           this.reload();
         },
         error: (e) => this.error.set(e.error ?? 'Ошибка'),
@@ -115,6 +118,7 @@ export default class ClientsPage implements OnInit {
       this.api.updatePhysicalClient(id, v).subscribe({
         next: () => {
           this.cancelPhys();
+          this.error.set(null);
           this.reload();
         },
         error: (e) => this.error.set(e.error ?? 'Ошибка'),
@@ -125,7 +129,10 @@ export default class ClientsPage implements OnInit {
   deleteClient(clientId: number, label: string) {
     if (!confirm(`Удалить «${label}»?`)) return;
     this.api.deleteClient(clientId).subscribe({
-      next: () => this.reload(),
+      next: () => {
+        this.error.set(null);
+        this.reload();
+      },
       error: (e) => this.error.set(typeof e.error === 'string' ? e.error : 'Невозможно удалить'),
     });
   }

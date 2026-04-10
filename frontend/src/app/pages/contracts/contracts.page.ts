@@ -197,7 +197,10 @@ export default class ContractsPage implements OnInit {
   remove(c: ContractRow) {
     if (!confirm('Удалить черновик?')) return;
     this.api.deleteContract(c.id).subscribe({
-      next: () => this.reload(),
+      next: () => {
+        this.error.set(null);
+        this.reload();
+      },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
   }
