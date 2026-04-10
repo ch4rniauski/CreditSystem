@@ -1,17 +1,25 @@
-<header class="app-header">
-  <strong>Кредитный отдел</strong>
-  <nav>
-    <a routerLink="/contracts" routerLinkActive="active">Договоры</a>
-    <a routerLink="/credit-products" routerLinkActive="active">Продукты</a>
-    <a routerLink="/clients" routerLinkActive="active">Клиенты</a>
-    <a routerLink="/currencies" routerLinkActive="active">Валюты</a>
-    <a routerLink="/refinance" routerLinkActive="active">НБРБ</a>
-    <a routerLink="/guarantors" routerLinkActive="active">Поручители</a>
-    <a routerLink="/pledges" routerLinkActive="active">Залог</a>
-    <a routerLink="/payments" routerLinkActive="active">Платежи</a>
-    <a routerLink="/reports" routerLinkActive="active">Отчёты</a>
-  </nav>
+<header class="app-header-wrap">
+  <div class="app-header">
+    <div class="brand-block">
+      <p class="brand-kicker">Finance Workspace</p>
+      <strong>Кредитный отдел</strong>
+    </div>
+    <nav class="app-nav" aria-label="Навигация по разделам">
+      <a routerLink="/contracts" routerLinkActive="active">Договоры</a>
+      <a routerLink="/credit-products" routerLinkActive="active">Продукты</a>
+      <a routerLink="/clients" routerLinkActive="active">Клиенты</a>
+      <a routerLink="/currencies" routerLinkActive="active">Валюты</a>
+      <a routerLink="/refinance" routerLinkActive="active">НБРБ</a>
+      <a routerLink="/guarantors" routerLinkActive="active">Поручители</a>
+      <a routerLink="/pledges" routerLinkActive="active">Залог</a>
+      <a routerLink="/payments" routerLinkActive="active">Платежи</a>
+      <a routerLink="/reports" routerLinkActive="active">Отчёты</a>
+    </nav>
+  </div>
 </header>
+
 <main class="app-main">
-  <router-outlet />
+  <section class="app-content-shell">
+    <router-outlet></router-outlet>
+  </section>
 </main>

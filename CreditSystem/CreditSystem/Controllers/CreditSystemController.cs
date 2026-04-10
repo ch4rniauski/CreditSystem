@@ -5,6 +5,7 @@ using CreditSystem.LoanMath;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.Text.RegularExpressions;
 
 namespace CreditSystem.Controllers;
 
@@ -15,6 +16,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     private const string StDraft = "Оформляется";
     private const string StSigned = "Оформлен";
     private const string StDone = "Завершён";
+    private static readonly Regex CurrencyCodeRegex = new("^[A-Z]{3}$", RegexOptions.Compiled);
 
     private static string ClientDisplay(Client c) =>
         c.ClientType == "legal"
@@ -29,6 +31,12 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             rate,
             c.TermMonths,
             c.IssueDate);
+    }
+
+    private static bool TryNormalizeCurrencyCode(string code, out string normalized)
+    {
+        normalized = code.Trim().ToUpperInvariant();
+        return CurrencyCodeRegex.IsMatch(normalized);
     }
 
     #region Currencies
@@ -46,7 +54,12 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     [HttpPost("currencies")]
     public async Task<ActionResult<int>> CreateCurrency([FromBody] CurrencyWriteDto dto, CancellationToken ct)
     {
-        var e = new Currency { Code = dto.Code, Name = dto.Name };
+        if (!TryNormalizeCurrencyCode(dto.Code, out var normalizedCode))
+        {
+            return BadRequest("Код валюты должен состоять только из букв (3 символа).");
+        }
+
+        var e = new Currency { Code = normalizedCode, Name = dto.Name };
         db.Currencies.Add(e);
         try
         {
@@ -67,9 +80,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     [HttpPut("currencies/{id:int}")]
     public async Task<IActionResult> UpdateCurrency(int id, [FromBody] CurrencyWriteDto dto, CancellationToken ct)
     {
+        if (!TryNormalizeCurrencyCode(dto.Code, out var normalizedCode))
+        {
+            return BadRequest("Код валюты должен состоять только из букв (3 символа).");
+        }
+
         var e = await db.Currencies.FindAsync([id], ct);
-        if (e == null) return NotFound();
-        e.Code = dto.Code;
+        if (e == null)
+        {
+            return NotFound();
+        }
+        e.Code = normalizedCode;
         e.Name = dto.Name;
         try
         {

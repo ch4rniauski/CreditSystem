@@ -69,6 +69,10 @@ CREATE TABLE currencies (
     name VARCHAR(50) NOT NULL
 );
 
+ALTER TABLE currencies
+ADD CONSTRAINT chk_currencies_code_letters_only
+CHECK (code ~ '^[A-Za-z]{3}$');
+
 CREATE TABLE credit_currencies (
     credit_id INTEGER REFERENCES credits(id),
     currency_id INTEGER REFERENCES currencies(id),

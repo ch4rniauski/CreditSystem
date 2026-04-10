@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, CurrencyRow } from '../../core/api.service';
+import { currencyCodeValidator } from '../../core/validators';
 
 @Component({
   selector: 'app-currencies',
@@ -19,7 +20,7 @@ export default class CurrenciesPage implements OnInit {
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
-    code: ['', Validators.required],
+    code: ['', [Validators.required, currencyCodeValidator()]],
     name: ['', Validators.required],
   });
 
@@ -48,11 +49,22 @@ export default class CurrenciesPage implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      return;
+    }
+
     const v = this.form.getRawValue();
+    const normalizedCode = v.code.trim().toUpperCase();
+    const payload = {
+      ...v,
+      code: normalizedCode,
+    };
+
+    this.form.controls.code.setValue(normalizedCode, { emitEvent: false });
+
     const id = this.editingId();
     if (id === null) {
-      this.api.createCurrency(v).subscribe({
+      this.api.createCurrency(payload).subscribe({
         next: () => {
           this.cancelEdit();
           this.reload();
@@ -60,7 +72,7 @@ export default class CurrenciesPage implements OnInit {
         error: (e) => this.error.set(e.error ?? 'Ошибка'),
       });
     } else {
-      this.api.updateCurrency(id, v).subscribe({
+      this.api.updateCurrency(id, payload).subscribe({
         next: () => {
           this.cancelEdit();
           this.reload();

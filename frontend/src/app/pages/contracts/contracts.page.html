@@ -99,7 +99,9 @@
             <div><strong>Штраф (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}%</div>
           </div>
 
+          <div class="details-row">
                   @if (d.guarantors && d.guarantors.length > 0) {
+                    <div class="details-column">
                     <h3>Поручители</h3>
                     <table class="nested-table">
                       <thead>
@@ -117,9 +119,11 @@
                         }
                       </tbody>
                     </table>
+                    </div>
                   }
 
                   @if (d.pledges && d.pledges.length > 0) {
+                    <div class="details-column">
                     <h3>Залог</h3>
                     <table class="nested-table">
                       <thead>
@@ -143,7 +147,9 @@
                         }
                       </tbody>
                     </table>
+                    </div>
                   }
+          </div>
         }
       </section>
     }

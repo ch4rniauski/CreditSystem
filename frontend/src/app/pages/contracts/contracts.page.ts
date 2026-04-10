@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, ContractDetailsDto, ContractRow, CreditProductRow, CurrencyRow } from '../../core/api.service';
 
@@ -9,10 +9,14 @@ import { ApiService, ContractDetailsDto, ContractRow, CreditProductRow, Currency
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './contracts.page.html',
   styleUrls: ['./contracts.page.scss'],
+  host: {
+    '(document:keydown.escape)': 'onEscape()',
+  },
 })
-export default class ContractsPage implements OnInit {
+export default class ContractsPage implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly fb = inject(FormBuilder);
+  private readonly document = inject(DOCUMENT);
 
   readonly rows = signal<ContractRow[]>([]);
   readonly credits = signal<CreditProductRow[]>([]);
@@ -25,6 +29,12 @@ export default class ContractsPage implements OnInit {
   readonly signLoading = signal(false);
   readonly signing = signal(false);
   readonly error = signal<string | null>(null);
+
+  private readonly syncBodyScrollLock = effect(() => {
+    const hasOpenModal =
+      this.detailsLoading() || !!this.viewedContract() || this.signLoading() || !!this.signCandidate();
+    this.document.body.classList.toggle('modal-open', hasOpenModal);
+  });
 
   readonly form = this.fb.nonNullable.group({
     clientId: [0, Validators.min(1)],
@@ -72,6 +82,11 @@ export default class ContractsPage implements OnInit {
         if (first) this.form.patchValue({ clientId: first });
       });
     });
+  }
+
+  ngOnDestroy() {
+    this.syncBodyScrollLock.destroy();
+    this.document.body.classList.remove('modal-open');
   }
 
   reload() {
@@ -222,6 +237,17 @@ export default class ContractsPage implements OnInit {
   closeDetails() {
     this.viewedContract.set(null);
     this.detailsLoading.set(false);
+  }
+
+  onEscape() {
+    if (this.signCandidate() || this.signLoading()) {
+      this.closeSignModal();
+      return;
+    }
+
+    if (this.viewedContract() || this.detailsLoading()) {
+      this.closeDetails();
+    }
   }
 
   rateTypeLabel(value: string): string {

@@ -1,32 +1,99 @@
+.app-header-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  padding: 0.9rem 1rem 0.4rem;
+  background: linear-gradient(180deg, rgba(231, 239, 229, 0.96) 0%, rgba(231, 239, 229, 0.7) 62%, transparent 100%);
+  backdrop-filter: blur(8px);
+}
+
 .app-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: #1a1a2e;
-  color: #eee;
+  max-width: 1280px;
+  margin: 0 auto;
+  border: 1px solid #cfe0d2;
+  background: linear-gradient(140deg, #113e35 0%, #1e5f52 40%, #17786a 100%);
+  color: #f3fffa;
+  border-radius: 20px;
+  padding: 0.95rem;
+  box-shadow: 0 14px 38px rgba(17, 62, 53, 0.28);
 }
 
-.app-header nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
+.brand-block {
+  margin-bottom: 0.8rem;
 }
 
-.app-header a {
-  color: #aac;
+.brand-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #c6efe6;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.brand-block strong {
+  display: block;
+  margin-top: 0.12rem;
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: clamp(1.2rem, 1.06rem + 0.6vw, 1.55rem);
+  letter-spacing: -0.01em;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.app-nav a {
   text-decoration: none;
-  font-size: 0.9rem;
+  color: #ebfff8;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.45rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid rgba(227, 255, 246, 0.28);
+  background: rgba(4, 22, 18, 0.14);
+  transition: transform 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
 }
 
-.app-header a.active,
-.app-header a:hover {
-  color: #fff;
-  text-decoration: underline;
+.app-nav a:hover {
+  transform: translateY(-1px);
+  border-color: rgba(227, 255, 246, 0.62);
+  background: rgba(4, 22, 18, 0.28);
+}
+
+.app-nav a.active {
+  color: #0a2a23;
+  border-color: #d4f8ee;
+  background: linear-gradient(180deg, #f4fffc 0%, #d7f4eb 100%);
 }
 
 .app-main {
-  padding: 1rem 1.25rem;
-  max-width: 1200px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.app-content-shell {
+  border: 1px solid #d3e2d5;
+  border-radius: 22px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 30px rgba(21, 33, 26, 0.08);
+}
+
+@media (max-width: 780px) {
+  .app-header-wrap {
+    padding: 0.6rem 0.65rem 0.2rem;
+  }
+
+  .app-header,
+  .app-content-shell {
+    border-radius: 16px;
+  }
+
+  .app-main {
+    padding: 0.2rem 0.65rem 1.2rem;
+  }
 }

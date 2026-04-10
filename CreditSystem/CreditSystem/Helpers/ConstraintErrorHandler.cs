@@ -31,6 +31,9 @@ public static class ConstraintErrorHandler
         if (constraintName == "chk_credits_min_term")
             return (true, "Мин срок кредита должен быть больше 0", "product");
 
+        if (constraintName == "chk_currencies_code_letters_only")
+            return (true, "Код валюты должен содержать только буквы", "currencies");
+
         // Interest rate constraint errors
         if (constraintName == "chk_interest_rates_term_range")
             return (true, "Срок 'от' не может быть больше срока 'до'", "interestRates");

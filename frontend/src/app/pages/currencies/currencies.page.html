@@ -1,13 +1,16 @@
     <h1>Валюты</h1>
     <section class="panel">
       <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
-        <label>Код <input formControlName="code" /></label>
+        <label>Код <input formControlName="code" maxlength="3" /></label>
         <label>Название <input formControlName="name" /></label>
         <button type="submit" [disabled]="form.invalid">{{ editingId() === null ? 'Добавить' : 'Сохранить' }}</button>
         @if (editingId() !== null) {
           <button type="button" (click)="cancelEdit()">Отмена</button>
         }
       </form>
+      @if (form.controls.code.touched && form.controls.code.errors?.['invalidCurrencyCode']) {
+        <p class="err">Код валюты должен состоять только из букв (3 символа).</p>
+      }
       @if (error()) {
         <p class="err">{{ error() }}</p>
       }
