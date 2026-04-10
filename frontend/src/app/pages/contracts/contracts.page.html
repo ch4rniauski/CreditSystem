@@ -181,11 +181,63 @@
             <div><strong>Штраф (просрочка):</strong> {{ d.fixedLatePenaltyZ ?? 0 }}%</div>
           </div>
 
+          <div class="details-row">
+            @if (d.guarantors && d.guarantors.length > 0) {
+              <div class="details-column">
+                <h3>Поручители</h3>
+                <table class="nested-table">
+                  <thead>
+                    <tr>
+                      <th>ФИО</th>
+                      <th>Паспорт</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (g of d.guarantors; track g.internalId) {
+                      <tr>
+                        <td>{{ g.guarantorFullName }}</td>
+                        <td>{{ g.passportSeries }} {{ g.passportNumber }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (d.pledges && d.pledges.length > 0) {
+              <div class="details-column">
+                <h3>Залог</h3>
+                <table class="nested-table">
+                  <thead>
+                    <tr>
+                      <th>Имущество</th>
+                      <th>Тип</th>
+                      <th>Стоимость</th>
+                      <th>Валюта</th>
+                      <th>Дата оценки</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of d.pledges; track p.internalId) {
+                      <tr>
+                        <td>{{ p.propertyName }}</td>
+                        <td>{{ pledgeTypeLabel(p.propertyType) }}</td>
+                        <td>{{ p.estimatedValue }}</td>
+                        <td>{{ p.currencyCode }}</td>
+                        <td>{{ p.assessmentDate | date: 'dd.MM.yyyy' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
           <div class="modal-actions">
-            <button type="button" (click)="closeSignModal()" [disabled]="signing()">Нет</button>
             <button type="button" (click)="confirmSign()" [disabled]="signing()">
               {{ signing() ? 'Оформление...' : 'Да, оформить договор' }}
             </button>
+            <button type="button" (click)="closeSignModal()" [disabled]="signing()">Нет</button>
           </div>
         }
       </section>

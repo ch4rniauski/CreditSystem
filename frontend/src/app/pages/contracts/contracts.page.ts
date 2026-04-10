@@ -257,8 +257,7 @@ export default class ContractsPage implements OnInit, OnDestroy {
   contractRateSummary(d: ContractDetailsDto): string {
     if (d.rateType === 'floating') {
       const additive = d.fixedAdditivePercent ?? 0;
-      const annual = d.fixedInterestRate ?? 0;
-      return `Плавающая (${annual}%)`;
+      return `Плавающая (надбавка ${additive}%)`;
     }
 
     return `Фиксированная (${d.fixedInterestRate ?? 0}%)`;
