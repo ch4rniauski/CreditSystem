@@ -89,7 +89,9 @@ public record ContractRow(
     int TermMonths,
     DateOnly IssueDate,
     string Status,
-    decimal RemainingPrincipal);
+    decimal RemainingPrincipal,
+    string? ClientPassportSeries,
+    string? ClientPassportNumber);
 
 public record ContractDetailsDto(
     int Id,

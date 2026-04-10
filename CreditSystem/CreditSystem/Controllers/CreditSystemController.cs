@@ -827,7 +827,9 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
                 z.x.c.TermMonths,
                 z.x.c.IssueDate,
                 z.x.c.Status,
-                z.x.c.RemainingPrincipal))
+                z.x.c.RemainingPrincipal,
+                z.cl.ClientType == "physical" ? z.cl.PhysPerson!.PassportSeries : null,
+                z.cl.ClientType == "physical" ? z.cl.PhysPerson!.PassportNumber : null))
             .ToListAsync(ct);
         return Ok(list);
     }

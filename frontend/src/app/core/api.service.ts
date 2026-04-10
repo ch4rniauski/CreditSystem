@@ -291,6 +291,8 @@ export interface ContractRow {
   issueDate: string;
   status: string;
   remainingPrincipal: number;
+  clientPassportSeries: string | null;
+  clientPassportNumber: string | null;
 }
 export interface ContractDetailsDto {
   id: number;

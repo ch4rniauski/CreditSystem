@@ -6,7 +6,7 @@
           >Договор
           <select formControlName="contractId">
             @for (c of draftPhysContracts(); track c.id) {
-              <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }}</option>
+              <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }} ({{ c.clientPassportSeries }} {{ c.clientPassportNumber }})</option>
             }
           </select>
         </label>
@@ -14,7 +14,7 @@
           >Поручитель (физлицо)
           <select formControlName="physPersonClientId">
             @for (p of availablePhys(); track p.clientId) {
-              <option [value]="p.clientId">{{ p.fullName }}, {{ p.passportSeries }} {{ p.passportNumber }}</option>
+              <option [value]="p.clientId">{{ p.fullName }} ({{ p.passportSeries }} {{ p.passportNumber }})</option>
             }
           </select>
         </label>
