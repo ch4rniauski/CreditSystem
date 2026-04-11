@@ -1185,11 +1185,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
 
     #region Payments
 
-    private static bool IsWeekend(DateOnly date)
-    {
-        return date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    }
-
     private static (DateOnly MonthStart, DateOnly MonthEnd) GetMonthBounds(DateOnly date)
     {
         var monthStart = new DateOnly(date.Year, date.Month, 1);
@@ -1201,11 +1196,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<PaymentMinimumDto>> GetMinimumPayment(int id, [FromQuery] DateOnly paymentDate,
         CancellationToken ct)
     {
-        if (IsWeekend(paymentDate))
-        {
-            return BadRequest("Платежи принимаются только в рабочие дни (понедельник-пятница).");
-        }
-
         var contract = await db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null)
         {
@@ -1295,11 +1285,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     public async Task<ActionResult<int>> PostPayment(int id, [FromBody] PaymentCreateDto dto,
         CancellationToken ct)
     {
-        if (IsWeekend(dto.PaymentDate))
-        {
-            return BadRequest("Платежи принимаются только в рабочие дни (понедельник-пятница).");
-        }
-
         var contract = await db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null) return NotFound();
         if (contract.Status != StSigned) return Conflict("Платежи только для «Оформлен».");
