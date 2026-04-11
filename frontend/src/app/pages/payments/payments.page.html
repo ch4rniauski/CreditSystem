@@ -27,4 +27,43 @@
       }
     </section>
 
+    <section class="panel">
+      <h2>Платежи по договору</h2>
+
+      @if (payments().length > 0) {
+        <table>
+          <thead>
+            <tr>
+              <th>Дата платежа</th>
+              <th>Плановая дата</th>
+              <th>Тип</th>
+              <th>Основной долг</th>
+              <th>Проценты</th>
+              <th>Досрочное</th>
+              <th>Просрочка</th>
+              <th>Итого</th>
+              <th>Остаток</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of payments(); track p.id) {
+              <tr>
+                <td>{{ p.paymentDate | date: 'dd.MM.yyyy' }}</td>
+                <td>{{ p.plannedPaymentDate | date: 'dd.MM.yyyy' }}</td>
+                <td>{{ p.paymentType === 'monthly' ? 'Ежемесячный' : 'Досрочный' }}</td>
+                <td>{{ p.principalAmount }}</td>
+                <td>{{ p.interestAmount }}</td>
+                <td>{{ p.earlyPenalty ?? 0 }}</td>
+                <td>{{ p.latePenalty ?? 0 }}</td>
+                <td>{{ p.totalAmount }}</td>
+                <td>{{ p.remainingAfterPayment }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="hint">По выбранному договору платежей пока нет.</p>
+      }
+    </section>
+
 

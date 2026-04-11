@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ApiService, ContractRow, PaymentMinimumDto } from '../../core/api.service';
+import { ApiService, ContractRow, PaymentMinimumDto, PaymentRow } from '../../core/api.service';
 
 @Component({
   selector: 'app-payments',
@@ -19,6 +19,7 @@ export default class PaymentsPage implements OnInit {
   readonly selectedContract = computed(() => this.signedContracts().find((c) => c.id === this.contractId()) ?? null);
   readonly minimumPaymentDate = computed(() => this.selectedContract()?.issueDate ?? '');
   readonly minimumPayment = signal<PaymentMinimumDto | null>(null);
+  readonly payments = signal<PaymentRow[]>([]);
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
@@ -33,6 +34,7 @@ export default class PaymentsPage implements OnInit {
       const first = signed[0]?.id ?? 0;
       this.contractId.set(first);
       this.refreshMinimumPayment();
+      this.refreshPayments();
     });
 
     this.form.controls.paymentDate.valueChanges.subscribe(() => {
@@ -43,6 +45,7 @@ export default class PaymentsPage implements OnInit {
   setContract(id: number) {
     this.contractId.set(id);
     this.refreshMinimumPayment();
+    this.refreshPayments();
   }
 
   clientDisplayWithPassport(c: ContractRow): string {
@@ -62,6 +65,7 @@ export default class PaymentsPage implements OnInit {
         this.error.set(null);
         this.minimumPayment.set(null);
         this.form.controls.paymentDate.setValue('');
+        this.refreshPayments();
         this.api.contracts().subscribe((list) => {
           const signed = list.filter((c) => c.status === 'Оформлен' && c.remainingPrincipal > 0);
           this.signedContracts.set(signed);
@@ -87,6 +91,19 @@ export default class PaymentsPage implements OnInit {
       error: () => {
         this.minimumPayment.set(null);
       },
+    });
+  }
+
+  private refreshPayments() {
+    const id = this.contractId();
+    if (!id) {
+      this.payments.set([]);
+      return;
+    }
+
+    this.api.payments(id).subscribe({
+      next: (rows) => this.payments.set(rows),
+      error: () => this.payments.set([]),
     });
   }
 }

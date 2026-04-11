@@ -1185,6 +1185,35 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
 
     #region Payments
 
+    [HttpGet("contracts/{id:int}/payments")]
+    public async Task<ActionResult<List<PaymentRow>>> GetPayments(int id, CancellationToken ct)
+    {
+        if (!await db.Contracts.AsNoTracking().AnyAsync(c => c.Id == id, ct))
+        {
+            return NotFound();
+        }
+
+        var list = await db.Payments.AsNoTracking()
+            .Where(p => p.ContractId == id)
+            .OrderByDescending(p => p.PaymentDate)
+            .ThenByDescending(p => p.Id)
+            .Select(p => new PaymentRow(
+                p.Id,
+                p.PaymentDate,
+                p.PlannedPaymentDate,
+                p.PaymentType,
+                p.PrincipalAmount,
+                p.InterestAmount,
+                p.EarlyPenalty,
+                p.LatePenalty,
+                p.TotalAmount,
+                p.RemainingAfterPayment,
+                p.AppliedAnnualRate))
+            .ToListAsync(ct);
+
+        return Ok(list);
+    }
+
     private static (DateOnly MonthStart, DateOnly MonthEnd) GetMonthBounds(DateOnly date)
     {
         var monthStart = new DateOnly(date.Year, date.Month, 1);

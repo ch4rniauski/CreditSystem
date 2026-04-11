@@ -172,6 +172,19 @@ public record PaymentCreateDto(DateOnly PaymentDate, decimal TotalAmount);
 
 public record PaymentMinimumDto(decimal MinimumAmount, decimal InterestAmount, decimal LatePenaltyAmount, decimal MaxAllowedAmount);
 
+public record PaymentRow(
+    int Id,
+    DateOnly PaymentDate,
+    DateOnly PlannedPaymentDate,
+    string PaymentType,
+    decimal PrincipalAmount,
+    decimal InterestAmount,
+    decimal? EarlyPenalty,
+    decimal? LatePenalty,
+    decimal TotalAmount,
+    decimal RemainingAfterPayment,
+    decimal AppliedAnnualRate);
+
 public record ExpectedPaymentsReportLineDto(int InstallmentNumber, DateOnly PlannedDate, decimal ExpectedPayment);
 
 public record CurrentDebtReportDto(
