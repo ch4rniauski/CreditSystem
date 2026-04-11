@@ -151,7 +151,7 @@ export default class CreditProductsPage implements OnInit {
 
   readonly penForm = this.fb.nonNullable.group({
     penaltyType: ['early_repayment', Validators.required],
-    valuePercent: [0, [Validators.required, Validators.min(0), nonNegativeValidator()]],
+    valuePercent: [0, [Validators.required, Validators.min(0), Validators.max(99.9999), nonNegativeValidator()]],
     validFrom: ['', Validators.required],
   });
 

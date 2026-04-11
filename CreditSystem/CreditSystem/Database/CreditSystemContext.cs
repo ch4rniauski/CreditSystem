@@ -81,17 +81,17 @@ public partial class CreditSystemContext : DbContext
             entity.Property(e => e.CreditId).HasColumnName("credit_id");
             entity.Property(e => e.CurrencyId).HasColumnName("currency_id");
             entity.Property(e => e.FixedAdditivePercent)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasColumnName("fixed_additive_percent");
             entity.Property(e => e.FixedEarlyPenaltyX)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasDefaultValue(0m)
                 .HasColumnName("fixed_early_penalty_x");
             entity.Property(e => e.FixedInterestRate)
                 .HasPrecision(10, 4)
                 .HasColumnName("fixed_interest_rate");
             entity.Property(e => e.FixedLatePenaltyZ)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasColumnName("fixed_late_penalty_z");
             entity.Property(e => e.InterestRateId).HasColumnName("interest_rate_id");
             entity.Property(e => e.IssueDate).HasColumnName("issue_date");
@@ -377,10 +377,10 @@ public partial class CreditSystemContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("change_date");
             entity.Property(e => e.NewValue)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasColumnName("new_value");
             entity.Property(e => e.OldValue)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasColumnName("old_value");
             entity.Property(e => e.PenaltyId).HasColumnName("penalty_id");
 
@@ -404,7 +404,7 @@ public partial class CreditSystemContext : DbContext
                 .HasColumnName("penalty_type");
             entity.Property(e => e.ValidFrom).HasColumnName("valid_from");
             entity.Property(e => e.ValuePercent)
-                .HasPrecision(5, 4)
+                .HasPrecision(6, 4)
                 .HasColumnName("value_percent");
 
             entity.HasOne(d => d.Credit).WithMany(p => p.Penalties)

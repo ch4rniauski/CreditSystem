@@ -85,21 +85,23 @@ public static class ConstraintErrorHandler
 
         // Penalty constraint errors
         if (constraintName == "chk_penalties_value")
-            return (true, "Штраф не может быть отрицательным", "penalties");
+            return (true, "Значение штрафа должно быть от 0 до 100, не включая 100.", "penalties");
         if (constraintName == "chk_penalties_chronological_order")
-            return (true, "Новый штраф должен иметь дату не раньше существующих штрафов", "penalties");
+            return (true, "Новый штраф должен иметь дату не раньше существующих штрафов того же типа.", "penalties");
 
         if (constraintName == "chk_payments_applied_annual_rate")
             return (true, "Примененная процентная ставка в платеже не может быть отрицательной", "payments");
 
         if (pgEx.SqlState == "22003")
         {
+            if (pgEx.TableName == "contracts")
+                return (true, "Значение процента в договоре слишком большое. Допустимый диапазон: от 0 до 100, не включая 100.", "contracts");
             if (pgEx.TableName == "interest_rates")
                 return (true, "Значение ставки слишком большое. Допустимый диапазон: от 0 до 9.9999.", "interestRates");
             if (pgEx.TableName == "refinance_rates")
                 return (true, "Значение ставки рефинансирования слишком большое.", "refinance");
             if (pgEx.TableName == "penalties")
-                return (true, "Значение штрафа слишком большое.", "penalties");
+                return (true, "Значение штрафа слишком большое. Допустимый диапазон: от 0 до 100, не включая 100.", "penalties");
             return (true, "Числовое значение выходит за допустимый диапазон.", null);
         }
 

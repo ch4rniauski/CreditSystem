@@ -147,7 +147,7 @@ CREATE TABLE penalties (
     id SERIAL PRIMARY KEY,
     credit_id INTEGER REFERENCES credits(id),
     penalty_type VARCHAR(20) NOT NULL,
-    value_percent DECIMAL(5,4) NOT NULL,
+    value_percent DECIMAL(6,4) NOT NULL,
     valid_from DATE NOT NULL
 );
 
@@ -157,7 +157,7 @@ CHECK (penalty_type IN ('early_repayment', 'late_payment'));
 
 ALTER TABLE penalties 
 ADD CONSTRAINT chk_penalties_value 
-CHECK (value_percent >= 0);
+CHECK (value_percent >= 0 AND value_percent < 100);
 
 ALTER TABLE penalties
 ADD CONSTRAINT uq_penalties_credit_type_valid_from
@@ -175,9 +175,9 @@ CREATE TABLE contracts (
     status VARCHAR(20) NOT NULL DEFAULT 'Оформляется',
     rate_type VARCHAR(20) NOT NULL,
     fixed_interest_rate DECIMAL(10,4),
-    fixed_additive_percent DECIMAL(5,4),
-    fixed_early_penalty_x DECIMAL(5,4) DEFAULT 0,
-    fixed_late_penalty_z DECIMAL(5,4),
+    fixed_additive_percent DECIMAL(6,4),
+    fixed_early_penalty_x DECIMAL(6,4) DEFAULT 0,
+    fixed_late_penalty_z DECIMAL(6,4),
     remaining_principal DECIMAL(15,2) NOT NULL DEFAULT 0
 );
 
@@ -195,11 +195,15 @@ CHECK (status IN ('Оформляется', 'Оформлен', 'Завершё�
 
 ALTER TABLE contracts 
 ADD CONSTRAINT chk_contracts_early_penalty 
-CHECK (fixed_early_penalty_x >= 0);
+CHECK (fixed_early_penalty_x >= 0 AND fixed_early_penalty_x < 100);
 
 ALTER TABLE contracts 
 ADD CONSTRAINT chk_contracts_late_penalty 
-CHECK (fixed_late_penalty_z >= 0);
+CHECK (fixed_late_penalty_z >= 0 AND fixed_late_penalty_z < 100);
+
+ALTER TABLE contracts 
+ADD CONSTRAINT chk_contracts_additive_percent 
+CHECK (fixed_additive_percent IS NULL OR (fixed_additive_percent >= 0 AND fixed_additive_percent < 100));
 
 ALTER TABLE contracts 
 ADD CONSTRAINT chk_contracts_remaining 
@@ -296,6 +300,6 @@ CREATE TABLE penalties_history (
     id SERIAL PRIMARY KEY,
     penalty_id INTEGER REFERENCES penalties(id),
     change_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    old_value DECIMAL(5,4),
-    new_value DECIMAL(5,4) NOT NULL
+    old_value DECIMAL(6,4),
+    new_value DECIMAL(6,4) NOT NULL
 );

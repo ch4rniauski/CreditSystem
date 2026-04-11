@@ -1259,9 +1259,24 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var balance = contract.RemainingPrincipal;
         var interest = line.InterestPortion;
 
-        var lateDays = paymentDate > line.PlannedPaymentDate
-            ? paymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
+        var previousMonthDate = paymentDate.AddMonths(-1);
+        var (prevMonthStart, prevMonthEnd) = GetMonthBounds(previousMonthDate);
+        var hasPaymentInPreviousMonth = await db.Payments.AsNoTracking()
+            .AnyAsync(p => p.ContractId == id
+                           && p.PaymentType == "monthly"
+                           && p.PaymentDate >= prevMonthStart
+                           && p.PaymentDate <= prevMonthEnd, ct);
+
+        var lateDays = paymentDate > plannedPaymentDate
+            ? paymentDate.DayNumber - plannedPaymentDate.DayNumber
             : 0;
+
+        var firstAccrualDate = LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
+        if (!hasPaymentInPreviousMonth && prevMonthEnd >= firstAccrualDate)
+        {
+            lateDays = Math.Max(0, paymentDate.DayNumber - plannedPaymentDate.DayNumber);
+        }
+
         var z = contract.FixedLatePenaltyZ ?? 0;
         var latePenalty = lateDays > 0
             ? decimal.Round((balance + line.InterestPortion) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
@@ -1328,9 +1343,24 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var balance = contract.RemainingPrincipal;
         var interest = line.InterestPortion;
 
-        var lateDays = dto.PaymentDate > line.PlannedPaymentDate
-            ? dto.PaymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
+        var previousMonthDate = dto.PaymentDate.AddMonths(-1);
+        var (prevMonthStart, prevMonthEnd) = GetMonthBounds(previousMonthDate);
+        var hasPaymentInPreviousMonth = await db.Payments.AsNoTracking()
+            .AnyAsync(p => p.ContractId == id
+                           && p.PaymentType == "monthly"
+                           && p.PaymentDate >= prevMonthStart
+                           && p.PaymentDate <= prevMonthEnd, ct);
+
+        var lateDays = dto.PaymentDate > plannedPaymentDate
+            ? dto.PaymentDate.DayNumber - plannedPaymentDate.DayNumber
             : 0;
+
+        var firstAccrualDate = LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
+        if (!hasPaymentInPreviousMonth && prevMonthEnd >= firstAccrualDate)
+        {
+            lateDays = Math.Max(0, dto.PaymentDate.DayNumber - plannedPaymentDate.DayNumber);
+        }
+
         var z = contract.FixedLatePenaltyZ ?? 0;
         var latePenalty = lateDays > 0
             ? decimal.Round((balance + line.InterestPortion) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)

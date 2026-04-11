@@ -19,8 +19,6 @@ public partial class Payment
 
     public decimal InterestAmount { get; set; }
 
-    public decimal AppliedAnnualRate { get; set; }
-
     public decimal? EarlyPenalty { get; set; }
 
     public decimal? LatePenalty { get; set; }
@@ -28,6 +26,8 @@ public partial class Payment
     public decimal TotalAmount { get; set; }
 
     public decimal RemainingAfterPayment { get; set; }
+
+    public decimal AppliedAnnualRate { get; set; }
 
     public virtual Contract? Contract { get; set; }
 }

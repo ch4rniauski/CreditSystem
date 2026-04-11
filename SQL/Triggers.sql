@@ -225,11 +225,13 @@ BEGIN
         SELECT 1
         FROM penalties p
         WHERE p.valid_from > NEW.valid_from
+          AND p.credit_id = NEW.credit_id
+          AND p.penalty_type = NEW.penalty_type
     ) THEN
         RAISE EXCEPTION USING
             ERRCODE = '23514',
             CONSTRAINT = 'chk_penalties_chronological_order',
-            MESSAGE = 'Новый штраф должен иметь дату не раньше существующих штрафов.';
+            MESSAGE = 'Новый штраф должен иметь дату не раньше существующих штрафов того же типа.';
     END IF;
 
     RETURN NEW;
