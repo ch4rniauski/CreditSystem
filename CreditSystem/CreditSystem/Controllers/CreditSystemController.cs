@@ -1188,6 +1188,13 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         return date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     }
 
+    private static (DateOnly MonthStart, DateOnly MonthEnd) GetMonthBounds(DateOnly date)
+    {
+        var monthStart = new DateOnly(date.Year, date.Month, 1);
+        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+        return (monthStart, monthEnd);
+    }
+
     [HttpGet("contracts/{id:int}/payments/minimum")]
     public async Task<ActionResult<PaymentMinimumDto>> GetMinimumPayment(int id, [FromQuery] DateOnly paymentDate,
         CancellationToken ct)
@@ -1211,6 +1218,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (paymentDate < contract.IssueDate)
         {
             return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
+        }
+
+        var (monthStart, monthEnd) = GetMonthBounds(paymentDate);
+        var alreadyPaidInMonth = await db.Payments.AsNoTracking()
+            .AnyAsync(p => p.ContractId == id
+                           && p.PaymentType == "monthly"
+                           && p.PaymentDate >= monthStart
+                           && p.PaymentDate <= monthEnd, ct);
+        if (alreadyPaidInMonth)
+        {
+            return Conflict("В выбранном месяце уже есть платеж по этому договору.");
         }
 
         var (rateOk, rateError, annualRate) =
@@ -1251,7 +1269,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             ? decimal.Round((balance + interest) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
-        var minimum = decimal.Round(interest + latePenalty, 2, MidpointRounding.AwayFromZero);
+        var minimum = decimal.Round(line.PrincipalPortion + interest + latePenalty, 2, MidpointRounding.AwayFromZero);
         return Ok(new PaymentMinimumDto(minimum, interest, latePenalty));
     }
 
@@ -1271,6 +1289,17 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         if (dto.PaymentDate < contract.IssueDate)
         {
             return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
+        }
+
+        var (monthStart, monthEnd) = GetMonthBounds(dto.PaymentDate);
+        var alreadyPaidInMonth = await db.Payments.AsNoTracking()
+            .AnyAsync(p => p.ContractId == id
+                           && p.PaymentType == "monthly"
+                           && p.PaymentDate >= monthStart
+                           && p.PaymentDate <= monthEnd, ct);
+        if (alreadyPaidInMonth)
+        {
+            return Conflict("В выбранном месяце уже есть платеж по этому договору.");
         }
 
         var (rateOk, rateError, annualRate) =
@@ -1307,6 +1336,13 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
         var latePenalty = lateDays > 0
             ? decimal.Round((balance + interest) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
             : 0m;
+
+        var minimumRequired = decimal.Round(line.PrincipalPortion + interest + latePenalty, 2,
+            MidpointRounding.AwayFromZero);
+        if (dto.TotalAmount < minimumRequired)
+        {
+            return BadRequest($"Минимальная сумма платежа: {minimumRequired:0.00}");
+        }
 
         var afterInterestLate = dto.TotalAmount - interest - latePenalty;
         if (afterInterestLate < 0) return BadRequest("Сумма недостаточна для процентов и штрафов.");
