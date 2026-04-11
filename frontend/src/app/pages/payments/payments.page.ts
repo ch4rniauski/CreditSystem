@@ -60,6 +60,8 @@ export default class PaymentsPage implements OnInit {
     this.api.postPayment(id, { paymentDate: v.paymentDate, totalAmount: v.totalAmount }).subscribe({
       next: () => {
         this.error.set(null);
+        this.minimumPayment.set(null);
+        this.form.controls.paymentDate.setValue('');
         this.api.contracts().subscribe((list) => {
           const signed = list.filter((c) => c.status === 'Оформлен' && c.remainingPrincipal > 0);
           this.signedContracts.set(signed);

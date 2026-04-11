@@ -15,6 +15,7 @@
           <input type="date" formControlName="paymentDate" [min]="minimumPaymentDate()" />
           @if (minimumPayment(); as minPay) {
             <small>Минимальный ожидаемый ежемесячный платеж: {{ minPay.minimumAmount }}</small>
+            <small>Максимально допустимая сумма для выбранной даты: {{ minPay.maxAllowedAmount }}</small>
           }
         </label>
         <label>Сумма <input type="number" step="0.01" formControlName="totalAmount" /></label>

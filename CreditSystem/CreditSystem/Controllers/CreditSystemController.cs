@@ -23,9 +23,11 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             ? c.LegalPerson?.Name ?? "—"
             : c.PhysPerson?.FullName ?? "—";
 
+    private static decimal AnnualFractionFromPercent(decimal annualPercent) => annualPercent / 100m;
+
     private IReadOnlyList<LoanScheduleEngine.ScheduleLine> ScheduleFor(Contract c)
     {
-        var rate = c.FixedInterestRate ?? 0;
+        var rate = AnnualFractionFromPercent(c.FixedInterestRate ?? 0);
         return LoanScheduleEngine.BuildSchedule(
             c.ContractAmount,
             rate,
@@ -741,7 +743,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
                 return (false, "Нет ставки по договору.", null);
             }
 
-            return (true, null, fixedAnnual);
+            return (true, null, AnnualFractionFromPercent(fixedAnnual));
         }
 
         if (contract.RateType != "floating")
@@ -760,7 +762,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             return (false, "Не найдена ставка рефинансирования НБРБ на дату расчета.", null);
         }
 
-        return (true, null, refinance.RatePercent + additive);
+        return (true, null, AnnualFractionFromPercent(refinance.RatePercent + additive));
     }
 
     private async Task<(decimal? early, decimal? late)> ResolvePenaltiesAtIssue(int creditId, DateOnly issueDate,
@@ -1231,15 +1233,6 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             return Conflict("В выбранном месяце уже есть платеж по этому договору.");
         }
 
-        var (rateOk, rateError, annualRate) =
-            await ResolveAnnualRateForContractAtDate(contract, paymentDate, ct);
-        if (!rateOk)
-        {
-            return BadRequest(rateError);
-        }
-
-        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate!.Value, contract.TermMonths,
-            contract.IssueDate);
         var paidCount =
             await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
         if (paidCount >= contract.TermMonths)
@@ -1247,30 +1240,40 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             return BadRequest("График закрыт.");
         }
 
-        var line = schedule[(int)paidCount];
-        var lastPayDate = await db.Payments.AsNoTracking()
-            .Where(p => p.ContractId == id)
-            .OrderByDescending(p => p.PaymentDate)
-            .Select(p => (DateOnly?)p.PaymentDate)
-            .FirstOrDefaultAsync(ct);
+        var plannedPaymentDate = LoanScheduleEngine.PlannedPaymentDateForMonth(contract.IssueDate, (int)paidCount);
+        var (rateOk, rateError, annualRate) =
+            await ResolveAnnualRateForContractAtDate(contract, plannedPaymentDate, ct);
+        if (!rateOk)
+        {
+            return BadRequest(rateError);
+        }
 
-        var accrualStart = lastPayDate is { } lp
-            ? lp.AddDays(1)
-            : LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
-        var days = Math.Max(1, paymentDate.DayNumber - accrualStart.DayNumber + 1);
+        var remainingMonths = contract.TermMonths - (int)paidCount;
+        var remainingIssueDate = plannedPaymentDate.AddMonths(-1);
+        var schedule = LoanScheduleEngine.BuildSchedule(
+            contract.RemainingPrincipal,
+            annualRate!.Value,
+            remainingMonths,
+            remainingIssueDate);
+        var line = schedule[0];
         var balance = contract.RemainingPrincipal;
-        var interest = decimal.Round(balance * annualRate.Value / 365m * days, 2, MidpointRounding.AwayFromZero);
+        var interest = line.InterestPortion;
 
         var lateDays = paymentDate > line.PlannedPaymentDate
             ? paymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
             : 0;
         var z = contract.FixedLatePenaltyZ ?? 0;
         var latePenalty = lateDays > 0
-            ? decimal.Round((balance + interest) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
+            ? decimal.Round((balance + line.InterestPortion) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
-        var minimum = decimal.Round(line.PrincipalPortion + interest + latePenalty, 2, MidpointRounding.AwayFromZero);
-        return Ok(new PaymentMinimumDto(minimum, interest, latePenalty));
+        var requiredPrincipal = Math.Min(line.PrincipalPortion, balance);
+        var minimum = decimal.Round(requiredPrincipal + interest + latePenalty, 2, MidpointRounding.AwayFromZero);
+        var x = contract.FixedEarlyPenaltyX ?? 0;
+        var maxExtraPrincipal = Math.Max(0m, balance - requiredPrincipal);
+        var maxAllowedTotal = decimal.Round(minimum + maxExtraPrincipal + maxExtraPrincipal * x / 100m, 2,
+            MidpointRounding.AwayFromZero);
+        return Ok(new PaymentMinimumDto(minimum, interest, latePenalty, maxAllowedTotal));
     }
 
     [HttpPost("contracts/{id:int}/payments")]
@@ -1302,60 +1305,73 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
             return Conflict("В выбранном месяце уже есть платеж по этому договору.");
         }
 
+        var paidCount =
+            await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
+        if (paidCount >= contract.TermMonths) return BadRequest("График закрыт.");
+
+        var plannedPaymentDate = LoanScheduleEngine.PlannedPaymentDateForMonth(contract.IssueDate, (int)paidCount);
         var (rateOk, rateError, annualRate) =
-            await ResolveAnnualRateForContractAtDate(contract, dto.PaymentDate, ct);
+            await ResolveAnnualRateForContractAtDate(contract, plannedPaymentDate, ct);
         if (!rateOk)
         {
             return BadRequest(rateError);
         }
 
-        var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annualRate!.Value, contract.TermMonths,
-            contract.IssueDate);
-        var paidCount =
-            await db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
-        if (paidCount >= contract.TermMonths) return BadRequest("График закрыт.");
-
-        var line = schedule[(int)paidCount];
-        var lastPayDate = await db.Payments.AsNoTracking()
-            .Where(p => p.ContractId == id)
-            .OrderByDescending(p => p.PaymentDate)
-            .Select(p => (DateOnly?)p.PaymentDate)
-            .FirstOrDefaultAsync(ct);
-
-        var accrualStart = lastPayDate is { } lp
-            ? lp.AddDays(1)
-            : LoanScheduleEngine.FirstAccrualDate(contract.IssueDate);
-        var days = Math.Max(1, dto.PaymentDate.DayNumber - accrualStart.DayNumber + 1);
+        var remainingMonths = contract.TermMonths - (int)paidCount;
+        var remainingIssueDate = plannedPaymentDate.AddMonths(-1);
+        var schedule = LoanScheduleEngine.BuildSchedule(
+            contract.RemainingPrincipal,
+            annualRate!.Value,
+            remainingMonths,
+            remainingIssueDate);
+        var line = schedule[0];
         var balance = contract.RemainingPrincipal;
-        var interest = decimal.Round(balance * annualRate.Value / 365m * days, 2, MidpointRounding.AwayFromZero);
+        var interest = line.InterestPortion;
 
         var lateDays = dto.PaymentDate > line.PlannedPaymentDate
             ? dto.PaymentDate.DayNumber - line.PlannedPaymentDate.DayNumber
             : 0;
         var z = contract.FixedLatePenaltyZ ?? 0;
         var latePenalty = lateDays > 0
-            ? decimal.Round((balance + interest) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
+            ? decimal.Round((balance + line.InterestPortion) * z / 100m * lateDays, 2, MidpointRounding.AwayFromZero)
             : 0m;
 
-        var minimumRequired = decimal.Round(line.PrincipalPortion + interest + latePenalty, 2,
+        var requiredPrincipal = Math.Min(line.PrincipalPortion, balance);
+        var minimumRequired = decimal.Round(requiredPrincipal + interest + latePenalty, 2,
             MidpointRounding.AwayFromZero);
         if (dto.TotalAmount < minimumRequired)
         {
             return BadRequest($"Минимальная сумма платежа: {minimumRequired:0.00}");
         }
 
-        var afterInterestLate = dto.TotalAmount - interest - latePenalty;
-        if (afterInterestLate < 0) return BadRequest("Сумма недостаточна для процентов и штрафов.");
-
-        var schedPrincipal = line.PrincipalPortion;
-        var excess = Math.Max(0, afterInterestLate - schedPrincipal);
         var x = contract.FixedEarlyPenaltyX ?? 0;
-        var earlyPenalty = decimal.Round(excess * x / 100m, 2, MidpointRounding.AwayFromZero);
-        var principalPaid = decimal.Round(afterInterestLate - earlyPenalty, 2, MidpointRounding.AwayFromZero);
+        var extraBudget = dto.TotalAmount - minimumRequired;
+        var penaltyFactor = 1m + x / 100m;
+        var requestedExtraPrincipal = extraBudget <= 0m
+            ? 0m
+            : decimal.Round(extraBudget / penaltyFactor, 2, MidpointRounding.AwayFromZero);
+        var maxExtraPrincipal = Math.Max(0m, balance - requiredPrincipal);
+        var extraPrincipal = Math.Min(requestedExtraPrincipal, maxExtraPrincipal);
+        var earlyPenalty = decimal.Round(extraPrincipal * x / 100m, 2, MidpointRounding.AwayFromZero);
+        var principalPaid = decimal.Round(requiredPrincipal + extraPrincipal, 2, MidpointRounding.AwayFromZero);
 
-        if (principalPaid < 0) return BadRequest("Некорректное распределение платежа.");
+        var maxAllowedTotal = decimal.Round(minimumRequired + maxExtraPrincipal + maxExtraPrincipal * x / 100m, 2,
+            MidpointRounding.AwayFromZero);
+        if (dto.TotalAmount > maxAllowedTotal + LoanScheduleEngine.Epsilon)
+        {
+            return BadRequest($"Сумма слишком большая. Максимально допустимая для этой даты: {maxAllowedTotal:0.00}");
+        }
+
+        if (principalPaid < 0)
+        {
+            return BadRequest("Некорректное распределение платежа.");
+        }
+
         var remainingAfter = decimal.Round(balance - principalPaid, 2, MidpointRounding.AwayFromZero);
-        if (remainingAfter < -LoanScheduleEngine.Epsilon) return BadRequest("Переплата основного долга сверх остатка.");
+        if (remainingAfter < -LoanScheduleEngine.Epsilon)
+        {
+            return BadRequest("Переплата основного долга сверх остатка.");
+        }
 
         var payment = new Payment
         {
@@ -1407,7 +1423,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     {
         var (ok, err, terms) = await TryResolveTerms(creditId, currencyId, termMonths, issueDate, ct);
         if (!ok) return BadRequest(err);
-        var annual = terms!.Annual;
+        var annual = AnnualFractionFromPercent(terms!.Annual);
         var schedule = LoanScheduleEngine.BuildSchedule(contractAmount, annual, termMonths, issueDate);
         var list = schedule.Select(l => new ExpectedPaymentsReportLineDto(l.InstallmentIndex + 1, l.PlannedPaymentDate,
             l.ScheduledTotalPayment)).ToList();
@@ -1470,7 +1486,7 @@ public class CreditSystemController(CreditSystemContext db) : ControllerBase
     {
         var contract = await db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract == null) return NotFound();
-        var annual = contract.FixedInterestRate ?? 0;
+        var annual = AnnualFractionFromPercent(contract.FixedInterestRate ?? 0);
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual, contract.TermMonths,
             contract.IssueDate);
 

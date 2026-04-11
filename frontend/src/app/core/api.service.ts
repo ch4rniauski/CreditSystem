@@ -376,6 +376,7 @@ export interface PaymentMinimumDto {
   minimumAmount: number;
   interestAmount: number;
   latePenaltyAmount: number;
+  maxAllowedAmount: number;
 }
 export interface ExpectedPaymentsReportLineDto {
   installmentNumber: number;
