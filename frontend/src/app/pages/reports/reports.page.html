@@ -1,5 +1,279 @@
     <h1>Отчёты</h1>
 
+      <section class="panel">
+        <h2>1. Договоры по выбранному разрезу</h2>
+        <form [formGroup]="distributionForm" (ngSubmit)="runDistribution()" class="form-grid">
+          <label
+            >Группировка
+            <select formControlName="groupBy">
+              <option value="status">По статусу</option>
+              <option value="clientType">По типу клиента</option>
+              <option value="currency">По валюте</option>
+              <option value="rateType">По виду ставки</option>
+              <option value="amountRange">По диапазону сумм</option>
+              <option value="termRange">По диапазону сроков</option>
+            </select>
+          </label>
+          <label>Дата с <input type="date" formControlName="fromDate" /></label>
+          <label>Дата по <input type="date" formControlName="toDate" /></label>
+          <button type="submit">Построить</button>
+        </form>
+        @if (contractDistributionError()) {
+          <p class="err">{{ contractDistributionError() }}</p>
+        }
+        @if (contractDistributionVisible() && contractDistribution().length) {
+          <div class="report-actions report-actions-inline">
+            <button type="button" (click)="hideDistribution()">Скрыть</button>
+          </div>
+          <p>Всего договоров: {{ contractDistributionTotal() }}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Разрез</th>
+                <th>Кол-во</th>
+                <th>Сумма</th>
+                <th>Средняя сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of contractDistribution(); track r.groupValue) {
+                <tr>
+                  <td>{{ r.groupValue }}</td>
+                  <td>{{ r.contractsCount }}</td>
+                  <td>{{ r.totalAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.averageAmount | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @if (contractDistributionVisible() && contractDistribution().length === 0) {
+          <p>По выбранным условиям договоры не найдены.</p>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>2. Портрет кредитной нагрузки клиентов</h2>
+        <div class="report-actions">
+          <button type="button" (click)="runClientLoad()">Загрузить отчет</button>
+          @if (clientLoadVisible() && clientLoad().length) {
+            <button type="button" (click)="hideClientLoad()">Скрыть</button>
+          }
+        </div>
+        @if (clientLoadError()) {
+          <p class="err">{{ clientLoadError() }}</p>
+        }
+        @if (clientLoadVisible() && clientLoad().length) {
+          <table>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Тип</th>
+                <th>Активных</th>
+                <th>Завершённых</th>
+                <th>Выдано</th>
+                <th>Остаток</th>
+                <th>Ср. срок</th>
+                <th>Ср. ставка</th>
+                <th>Просроченные платежи</th>
+                <th>Плановых платежей</th>
+                <th>Доля просроченных платежей</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of clientLoad(); track r.clientId) {
+                <tr>
+                  <td>{{ r.clientDisplay }}</td>
+                  <td>{{ r.clientType }}</td>
+                  <td>{{ r.activeContractsCount }}</td>
+                  <td>{{ r.completedContractsCount }}</td>
+                  <td>{{ r.totalIssuedAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.totalRemainingPrincipal | number: '1.2-2' }}</td>
+                  <td>{{ r.averageTermMonths | number: '1.0-2' }}</td>
+                  <td>{{ r.averageInterestRate | number: '1.0-2' }}</td>
+                  <td>{{ r.overduePaymentsCount }}</td>
+                  <td>{{ r.scheduledPaymentsCount }}</td>
+                  <td>{{ r.overduePaymentShare | number: '1.0-2' }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>3. Договоры с обеспечением и покрытием риска</h2>
+        <div class="report-actions">
+          <button type="button" (click)="runCollateral()">Загрузить отчет</button>
+          @if (collateralVisible() && collateral().length) {
+            <button type="button" (click)="hideCollateral()">Скрыть</button>
+          }
+        </div>
+        @if (collateralError()) {
+          <p class="err">{{ collateralError() }}</p>
+        }
+        @if (collateralVisible() && collateral().length) {
+          <table>
+            <thead>
+              <tr>
+                <th>Договор</th>
+                <th>Продукт</th>
+                <th>Клиент</th>
+                <th>Валюта</th>
+                <th>Сумма</th>
+                <th>Остаток</th>
+                <th>Залоги</th>
+                <th>Коэфф покрытия</th>
+                <th>Поручители</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of collateral(); track r.contractId) {
+                <tr>
+                  <td>{{ r.contractId }}</td>
+                  <td>{{ r.creditName }}</td>
+                  <td>{{ r.clientDisplay }}</td>
+                  <td>{{ r.currencyCode }}</td>
+                  <td>{{ r.contractAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.remainingPrincipal | number: '1.2-2' }}</td>
+                  <td>{{ r.pledgeValue | number: '1.2-2' }}</td>
+                  <td>{{ r.coverageCoefficient | number: '1.0000-4' }}</td>
+                  <td>
+                    {{ r.guarantorCount }}
+                    @if (r.hasGuarantors) {
+                      <span>есть</span>
+                    } @else {
+                      <span>нет</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>4. Клиенты с активными договорами</h2>
+        <div class="report-actions">
+          <button type="button" (click)="runActiveClients()">Загрузить отчет</button>
+          @if (activeClientsVisible() && activeClients().length) {
+            <button type="button" (click)="hideActiveClients()">Скрыть</button>
+          }
+        </div>
+        @if (activeClientsError()) {
+          <p class="err">{{ activeClientsError() }}</p>
+        }
+        @if (activeClientsVisible() && activeClients().length) {
+          <table>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Активных договоров</th>
+                <th>Выдано</th>
+                <th>Остаток</th>
+                <th>Средний платёж</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of activeClients(); track r.clientId) {
+                <tr>
+                  <td>{{ r.clientDisplay }}</td>
+                  <td>{{ r.activeContractsCount }}</td>
+                  <td>{{ r.totalIssuedAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.totalRemainingPrincipal | number: '1.2-2' }}</td>
+                  <td>{{ r.averageMonthlyPayment | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>5. Сводка по кредитным продуктам</h2>
+        <div class="report-actions">
+          <button type="button" (click)="runProductSummary()">Загрузить отчет</button>
+          @if (productSummaryVisible() && productSummary().length) {
+            <button type="button" (click)="hideProductSummary()">Скрыть</button>
+          }
+        </div>
+        @if (productSummaryError()) {
+          <p class="err">{{ productSummaryError() }}</p>
+        }
+        @if (productSummaryVisible() && productSummary().length) {
+          <table>
+            <thead>
+              <tr>
+                <th>Продукт</th>
+                <th>Договоров</th>
+                <th>Выдано</th>
+                <th>Средняя сумма</th>
+                <th>Средний срок</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of productSummary(); track r.creditId) {
+                <tr>
+                  <td>{{ r.creditName }}</td>
+                  <td>{{ r.contractsCount }}</td>
+                  <td>{{ r.totalIssuedAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.averageContractAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.averageTermMonths | number: '1.0-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>6. Договоры с небольшим остатком долга</h2>
+        <form [formGroup]="nearCompletionForm" (ngSubmit)="runNearCompletion()" class="form-grid">
+          <label>Порог остатка (%) <input type="number" formControlName="thresholdPercent" /></label>
+          <button type="submit" [disabled]="nearCompletionForm.invalid">Построить</button>
+        </form>
+        @if (nearCompletionError()) {
+          <p class="err">{{ nearCompletionError() }}</p>
+        }
+        @if (nearCompletionVisible() && nearCompletion().length) {
+          <div class="report-actions report-actions-inline">
+            <button type="button" (click)="hideNearCompletion()">Скрыть</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Договор</th>
+                <th>Продукт</th>
+                <th>Клиент</th>
+                <th>Сумма</th>
+                <th>Остаток</th>
+                <th>Погашено</th>
+                <th>Остаток %</th>
+                <th>Ожидаемое завершение</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of nearCompletion(); track r.contractId) {
+                <tr>
+                  <td>{{ r.contractId }}</td>
+                  <td>{{ r.creditName }}</td>
+                  <td>{{ r.clientDisplay }}</td>
+                  <td>{{ r.contractAmount | number: '1.2-2' }}</td>
+                  <td>{{ r.remainingPrincipal | number: '1.2-2' }}</td>
+                  <td>{{ r.repaidPercent | number: '1.0-2' }}%</td>
+                  <td>{{ r.remainingPercent | number: '1.0-2' }}%</td>
+                  <td>{{ r.expectedCompletionDate | date: 'dd.MM.yyyy' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        @if (nearCompletionVisible() && nearCompletion().length === 0) {
+          <p>Подходящих договоров не найдено.</p>
+        }
+      </section>
+
     <section class="panel">
       <h2>7. Ожидаемые ежемесячные платежи (при оформлении)</h2>
       <form [formGroup]="r7Form" (ngSubmit)="runExpected()" class="form-grid">

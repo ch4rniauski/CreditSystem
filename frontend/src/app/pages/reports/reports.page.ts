@@ -1,13 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   ApiService,
+  ActiveClientSummaryReportRow,
+  ClientCreditLoadReportRow,
+  ContractCollateralReportRow,
+  ContractDistributionQuery,
+  ContractDistributionReportRow,
   ContractRow,
   CreditHistoryEventDto,
+  CreditProductSummaryReportRow,
   CreditProductRow,
   CurrentDebtReportDto,
   ExpectedPaymentsReportLineDto,
+  NearCompletionContractReportRow,
   PaymentCalendarLineDto,
 } from '../../core/api.service';
 
@@ -24,6 +31,27 @@ export default class ReportsPage implements OnInit {
 
   readonly credits = signal<CreditProductRow[]>([]);
   readonly currencies = signal<{ id: number; code: string }[]>([]);
+  readonly contractDistribution = signal<ContractDistributionReportRow[]>([]);
+  readonly contractDistributionVisible = signal(false);
+  readonly contractDistributionError = signal<string | null>(null);
+  readonly contractDistributionTotal = computed(() =>
+    this.contractDistribution().reduce((sum, row) => sum + row.contractsCount, 0),
+  );
+  readonly clientLoad = signal<ClientCreditLoadReportRow[]>([]);
+  readonly clientLoadVisible = signal(false);
+  readonly clientLoadError = signal<string | null>(null);
+  readonly collateral = signal<ContractCollateralReportRow[]>([]);
+  readonly collateralVisible = signal(false);
+  readonly collateralError = signal<string | null>(null);
+  readonly activeClients = signal<ActiveClientSummaryReportRow[]>([]);
+  readonly activeClientsVisible = signal(false);
+  readonly activeClientsError = signal<string | null>(null);
+  readonly productSummary = signal<CreditProductSummaryReportRow[]>([]);
+  readonly productSummaryVisible = signal(false);
+  readonly productSummaryError = signal<string | null>(null);
+  readonly nearCompletion = signal<NearCompletionContractReportRow[]>([]);
+  readonly nearCompletionVisible = signal(false);
+  readonly nearCompletionError = signal<string | null>(null);
   readonly expected = signal<ExpectedPaymentsReportLineDto[]>([]);
   readonly expectedVisible = signal(false);
   readonly expectedError = signal<string | null>(null);
@@ -37,6 +65,16 @@ export default class ReportsPage implements OnInit {
   readonly history = signal<CreditHistoryEventDto[]>([]);
   readonly historyVisible = signal(false);
   readonly historyLoaded = signal(false);
+
+  readonly distributionForm = this.fb.nonNullable.group({
+    groupBy: ['status'],
+    fromDate: [''],
+    toDate: [''],
+  });
+
+  readonly nearCompletionForm = this.fb.nonNullable.group({
+    thresholdPercent: [20, [Validators.required, Validators.min(0.01), Validators.max(100)]],
+  });
 
   readonly r7Form = this.fb.nonNullable.group({
     creditId: [0, Validators.min(1)],
@@ -73,6 +111,134 @@ export default class ReportsPage implements OnInit {
   onHistoryCreditChange(id: number) {
     this.historyCreditId.set(id);
     this.loadHistory();
+  }
+
+  runDistribution() {
+    this.contractDistributionError.set(null);
+    const value = this.distributionForm.getRawValue();
+
+    const query: ContractDistributionQuery = {
+      groupBy: value.groupBy,
+      fromDate: value.fromDate || null,
+      toDate: value.toDate || null,
+    };
+
+    this.api.reportContractDistribution(query).subscribe({
+      next: (rows) => {
+        this.contractDistribution.set(rows);
+        this.contractDistributionVisible.set(true);
+      },
+      error: (e) => {
+        this.contractDistribution.set([]);
+        this.contractDistributionVisible.set(false);
+        this.contractDistributionError.set(this.apiErrorMessage(e, 'Не удалось загрузить отчет по договорам.'));
+      },
+    });
+  }
+
+  hideDistribution() {
+    this.contractDistributionVisible.set(false);
+  }
+
+  runClientLoad() {
+    this.clientLoadError.set(null);
+    this.api.reportClientCreditLoad().subscribe({
+      next: (rows) => {
+        this.clientLoad.set(rows);
+        this.clientLoadVisible.set(true);
+      },
+      error: (e) => {
+        this.clientLoad.set([]);
+        this.clientLoadVisible.set(false);
+        this.clientLoadError.set(this.apiErrorMessage(e, 'Не удалось загрузить портрет кредитной нагрузки.'));
+      },
+    });
+  }
+
+  hideClientLoad() {
+    this.clientLoadVisible.set(false);
+  }
+
+  runCollateral() {
+    this.collateralError.set(null);
+    this.api.reportContractCollateral().subscribe({
+      next: (rows) => {
+        this.collateral.set(rows);
+        this.collateralVisible.set(true);
+      },
+      error: (e) => {
+        this.collateral.set([]);
+        this.collateralVisible.set(false);
+        this.collateralError.set(this.apiErrorMessage(e, 'Не удалось загрузить отчет по обеспечению.'));
+      },
+    });
+  }
+
+  hideCollateral() {
+    this.collateralVisible.set(false);
+  }
+
+  runActiveClients() {
+    this.activeClientsError.set(null);
+    this.api.reportActiveClients().subscribe({
+      next: (rows) => {
+        this.activeClients.set(rows);
+        this.activeClientsVisible.set(true);
+      },
+      error: (e) => {
+        this.activeClients.set([]);
+        this.activeClientsVisible.set(false);
+        this.activeClientsError.set(this.apiErrorMessage(e, 'Не удалось загрузить отчет по активным клиентам.'));
+      },
+    });
+  }
+
+  hideActiveClients() {
+    this.activeClientsVisible.set(false);
+  }
+
+  runProductSummary() {
+    this.productSummaryError.set(null);
+    this.api.reportCreditProductSummary().subscribe({
+      next: (rows) => {
+        this.productSummary.set(rows);
+        this.productSummaryVisible.set(true);
+      },
+      error: (e) => {
+        this.productSummary.set([]);
+        this.productSummaryVisible.set(false);
+        this.productSummaryError.set(this.apiErrorMessage(e, 'Не удалось загрузить сводку по кредитным продуктам.'));
+      },
+    });
+  }
+
+  hideProductSummary() {
+    this.productSummaryVisible.set(false);
+  }
+
+  runNearCompletion() {
+    if (this.nearCompletionForm.invalid) {
+      return;
+    }
+
+    this.nearCompletionError.set(null);
+    const thresholdPercent = this.nearCompletionForm.getRawValue().thresholdPercent;
+
+    this.api.reportNearCompletionContracts(thresholdPercent).subscribe({
+      next: (rows) => {
+        this.nearCompletion.set(rows);
+        this.nearCompletionVisible.set(true);
+      },
+      error: (e) => {
+        this.nearCompletion.set([]);
+        this.nearCompletionVisible.set(false);
+        this.nearCompletionError.set(this.apiErrorMessage(e, 'Не удалось загрузить отчет по договорам с малым остатком долга.'));
+      },
+    });
+  }
+
+  hideNearCompletion() {
+    this.nearCompletionVisible.set(false);
   }
 
   runExpected() {
@@ -172,6 +338,24 @@ export default class ReportsPage implements OnInit {
 
   hideHistory() {
     this.historyVisible.set(false);
+  }
+
+  private apiErrorMessage(error: unknown, fallback: string): string {
+    if (typeof error === 'object' && error && 'error' in error) {
+      const maybeError = (error as { error?: unknown }).error;
+      if (typeof maybeError === 'string') {
+        return maybeError;
+      }
+
+      if (maybeError && typeof maybeError === 'object' && 'error' in maybeError) {
+        const nested = (maybeError as { error?: unknown }).error;
+        if (typeof nested === 'string') {
+          return nested;
+        }
+      }
+    }
+
+    return fallback;
   }
 
   historyKindLabel(kind: string | null): string {

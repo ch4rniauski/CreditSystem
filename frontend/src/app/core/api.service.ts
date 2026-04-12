@@ -181,6 +181,50 @@ export class ApiService {
   reportCreditHistory(creditId: number) {
     return this.http.get<CreditHistoryEventDto[]>(`${this.base}/credit-products/${creditId}/reports/history`);
   }
+
+  reportContractDistribution(q: ContractDistributionQuery) {
+    let params = new HttpParams();
+
+    if (q.groupBy) {
+      params = params.set('groupBy', q.groupBy);
+    }
+
+    if (q.fromDate) {
+      params = params.set('fromDate', q.fromDate);
+    }
+
+    if (q.toDate) {
+      params = params.set('toDate', q.toDate);
+    }
+
+    return this.http.get<ContractDistributionReportRow[]>(`${this.base}/reports/contracts/distribution`, {
+      params,
+    });
+  }
+
+  reportClientCreditLoad() {
+    return this.http.get<ClientCreditLoadReportRow[]>(`${this.base}/reports/client-credit-load`);
+  }
+
+  reportContractCollateral() {
+    return this.http.get<ContractCollateralReportRow[]>(`${this.base}/reports/contracts/collateral`);
+  }
+
+  reportActiveClients() {
+    return this.http.get<ActiveClientSummaryReportRow[]>(`${this.base}/reports/active-clients`);
+  }
+
+  reportCreditProductSummary() {
+    return this.http.get<CreditProductSummaryReportRow[]>(`${this.base}/reports/credit-products/summary`);
+  }
+
+  reportNearCompletionContracts(thresholdPercent: number) {
+    const params = new HttpParams().set('thresholdPercent', String(thresholdPercent));
+    return this.http.get<NearCompletionContractReportRow[]>(
+      `${this.base}/reports/contracts/nearing-completion`,
+      { params },
+    );
+  }
 }
 
 export interface CurrencyRow {
@@ -433,4 +477,67 @@ export interface Report7Query {
   contractAmount: number;
   termMonths: number;
   issueDate: string;
+}
+export interface ContractDistributionQuery {
+  groupBy: string;
+  fromDate: string | null;
+  toDate: string | null;
+}
+export interface ContractDistributionReportRow {
+  groupValue: string;
+  contractsCount: number;
+  totalAmount: number;
+  averageAmount: number;
+}
+export interface ClientCreditLoadReportRow {
+  clientId: number;
+  clientDisplay: string;
+  clientType: string;
+  activeContractsCount: number;
+  completedContractsCount: number;
+  totalIssuedAmount: number;
+  totalRemainingPrincipal: number;
+  averageTermMonths: number;
+  averageInterestRate: number;
+  overduePaymentsCount: number;
+  scheduledPaymentsCount: number;
+  overduePaymentShare: number;
+}
+export interface ContractCollateralReportRow {
+  contractId: number;
+  creditName: string;
+  clientDisplay: string;
+  currencyCode: string;
+  contractAmount: number;
+  remainingPrincipal: number;
+  pledgeValue: number;
+  coverageCoefficient: number;
+  hasGuarantors: boolean;
+  guarantorCount: number;
+}
+export interface ActiveClientSummaryReportRow {
+  clientId: number;
+  clientDisplay: string;
+  activeContractsCount: number;
+  totalIssuedAmount: number;
+  totalRemainingPrincipal: number;
+  averageMonthlyPayment: number;
+}
+export interface CreditProductSummaryReportRow {
+  creditId: number;
+  creditName: string;
+  contractsCount: number;
+  totalIssuedAmount: number;
+  averageContractAmount: number;
+  averageTermMonths: number;
+}
+export interface NearCompletionContractReportRow {
+  contractId: number;
+  creditName: string;
+  clientDisplay: string;
+  contractAmount: number;
+  remainingPrincipal: number;
+  repaidPercent: number;
+  remainingPercent: number;
+  expectedCompletionDate: string;
 }

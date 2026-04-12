@@ -1018,3 +1018,339 @@ SELECT
     h.penalty_type
 FROM report_credit_history(NULL) h
 ORDER BY h.change_date DESC;
+
+-- Дополнительные отчеты для клиентского приложения.
+
+CREATE OR REPLACE FUNCTION report_contract_distribution(
+    p_group_by TEXT DEFAULT 'status',
+    p_from_date DATE DEFAULT NULL,
+    p_to_date DATE DEFAULT NULL)
+RETURNS TABLE (
+    group_value TEXT,
+    contracts_count INT,
+    total_amount NUMERIC,
+    average_amount NUMERIC)
+LANGUAGE sql
+AS $$
+    WITH base AS (
+        SELECT
+            c.id,
+            c.status,
+            cl.client_type,
+            cu.code AS currency_code,
+            cr.min_amount,
+            cr.max_amount,
+            cr.min_term_months,
+            cr.max_term_months,
+            c.contract_amount,
+            c.issue_date,
+            c.rate_type
+        FROM contracts c
+        JOIN clients cl ON cl.id = c.client_id
+        JOIN credits cr ON cr.id = c.credit_id
+        JOIN currencies cu ON cu.id = c.currency_id
+        WHERE (p_from_date IS NULL OR c.issue_date >= p_from_date)
+          AND (p_to_date IS NULL OR c.issue_date <= p_to_date)
+    )
+    SELECT
+        CASE LOWER(COALESCE(p_group_by, 'status'))
+            WHEN 'clienttype' THEN CASE base.client_type WHEN 'legal' THEN 'Юридическое лицо' ELSE 'Физическое лицо' END
+            WHEN 'currency' THEN base.currency_code
+            WHEN 'ratetype' THEN CASE base.rate_type WHEN 'fixed' THEN 'Фиксированная' ELSE 'Плавающая' END
+            WHEN 'amountrange' THEN base.min_amount::TEXT || ' - ' || base.max_amount::TEXT
+            WHEN 'termrange' THEN base.min_term_months::TEXT || ' - ' || base.max_term_months::TEXT || ' мес.'
+            ELSE base.status
+        END AS group_value,
+        COUNT(*)::INT AS contracts_count,
+        ROUND(SUM(base.contract_amount), 2) AS total_amount,
+        ROUND(AVG(base.contract_amount), 2) AS average_amount
+    FROM base
+    GROUP BY 1
+    ORDER BY contracts_count DESC, group_value;
+$$;
+
+CREATE OR REPLACE FUNCTION report_client_credit_load()
+RETURNS TABLE (
+    client_id INT,
+    client_display TEXT,
+    client_type TEXT,
+    active_contracts_count INT,
+    completed_contracts_count INT,
+    total_issued_amount NUMERIC,
+    total_remaining_principal NUMERIC,
+    average_term_months NUMERIC,
+    average_interest_rate NUMERIC,
+    overdue_payments_count INT,
+    scheduled_payments_count INT,
+    overdue_payment_share NUMERIC)
+LANGUAGE sql
+AS $$
+    WITH contracts_base AS (
+        SELECT
+            c.id AS contract_id,
+            cl.id AS client_id,
+            CASE
+                WHEN cl.client_type = 'legal' THEN lp.name
+                ELSE pp.full_name
+            END AS client_display,
+            cl.client_type,
+            c.status,
+            c.contract_amount,
+            c.remaining_principal,
+            c.term_months,
+            c.issue_date,
+            COALESCE(c.fixed_interest_rate, 0) AS fixed_interest_rate
+        FROM contracts c
+        JOIN clients cl ON cl.id = c.client_id
+        LEFT JOIN legal_persons lp ON lp.client_id = cl.id
+        LEFT JOIN phys_persons pp ON pp.client_id = cl.id
+        WHERE c.status <> 'Оформляется'
+    ),
+    payment_stats AS (
+        SELECT
+            p.contract_id,
+            COUNT(*) FILTER (WHERE p.payment_date > p.planned_payment_date)::INT AS overdue_payments_count
+        FROM payments p
+        WHERE p.payment_type = 'monthly'
+        GROUP BY p.contract_id
+    ),
+    schedule_stats AS (
+        SELECT
+            b.contract_id,
+            COUNT(*)::INT AS scheduled_payments_count
+        FROM contracts_base b
+        CROSS JOIN LATERAL build_schedule(
+            b.contract_amount,
+            b.fixed_interest_rate / 100,
+            b.term_months,
+            b.issue_date) s
+        GROUP BY b.contract_id
+    )
+    SELECT
+        b.client_id,
+        b.client_display,
+        CASE WHEN b.client_type = 'legal' THEN 'Юридическое лицо' ELSE 'Физическое лицо' END AS client_type,
+        COUNT(*) FILTER (WHERE b.status = 'Оформлен')::INT AS active_contracts_count,
+        COUNT(*) FILTER (WHERE b.status = 'Завершён')::INT AS completed_contracts_count,
+        ROUND(SUM(b.contract_amount), 2) AS total_issued_amount,
+        ROUND(SUM(b.remaining_principal), 2) AS total_remaining_principal,
+        ROUND(AVG(b.term_months), 2) AS average_term_months,
+        ROUND(AVG(b.fixed_interest_rate), 2) AS average_interest_rate,
+        COALESCE(SUM(ps.overdue_payments_count), 0)::INT AS overdue_payments_count,
+        COALESCE(SUM(ss.scheduled_payments_count), 0)::INT AS scheduled_payments_count,
+        CASE
+            WHEN COALESCE(SUM(ss.scheduled_payments_count), 0) > 0 THEN
+                ROUND(COALESCE(SUM(ps.overdue_payments_count), 0) * 100.0 / SUM(ss.scheduled_payments_count), 2)
+            ELSE 0
+        END AS overdue_payment_share
+    FROM contracts_base b
+    LEFT JOIN payment_stats ps ON ps.contract_id = b.contract_id
+    LEFT JOIN schedule_stats ss ON ss.contract_id = b.contract_id
+    GROUP BY b.client_id, b.client_display, b.client_type
+    ORDER BY total_remaining_principal DESC, b.client_display;
+$$;
+
+CREATE OR REPLACE FUNCTION report_contract_collateral()
+RETURNS TABLE (
+    contract_id INT,
+    credit_name TEXT,
+    client_display TEXT,
+    currency_code TEXT,
+    contract_amount NUMERIC,
+    remaining_principal NUMERIC,
+    pledge_value NUMERIC,
+    coverage_coefficient NUMERIC,
+    has_guarantors BOOLEAN,
+    guarantor_count INT)
+LANGUAGE sql
+AS $$
+    WITH base AS (
+        SELECT
+            c.id AS contract_id,
+            cr.name AS credit_name,
+            CASE
+                WHEN cl.client_type = 'legal' THEN lp.name
+                ELSE pp.full_name
+            END AS client_display,
+            cu.code AS currency_code,
+            c.currency_id,
+            c.contract_amount,
+            c.remaining_principal
+        FROM contracts c
+        JOIN credits cr ON cr.id = c.credit_id
+        JOIN currencies cu ON cu.id = c.currency_id
+        JOIN clients cl ON cl.id = c.client_id
+        LEFT JOIN legal_persons lp ON lp.client_id = cl.id
+        LEFT JOIN phys_persons pp ON pp.client_id = cl.id
+        WHERE c.status <> 'Оформляется'
+    ),
+    pledge_stats AS (
+        SELECT
+            b.contract_id,
+            COALESCE(SUM(p.estimated_value), 0) AS pledge_value
+        FROM base b
+        LEFT JOIN pledges p ON p.contract_id = b.contract_id AND p.currency_id = b.currency_id
+        GROUP BY b.contract_id
+    ),
+    guarantor_stats AS (
+        SELECT
+            g.contract_id,
+            COUNT(*)::INT AS guarantor_count
+        FROM guarantors g
+        GROUP BY g.contract_id
+    )
+    SELECT
+        b.contract_id,
+        b.credit_name,
+        b.client_display,
+        b.currency_code,
+        ROUND(b.contract_amount, 2) AS contract_amount,
+        ROUND(b.remaining_principal, 2) AS remaining_principal,
+        ROUND(COALESCE(ps.pledge_value, 0), 2) AS pledge_value,
+        CASE
+            WHEN b.remaining_principal > 0 THEN ROUND(COALESCE(ps.pledge_value, 0) / b.remaining_principal, 4)
+            ELSE 0
+        END AS coverage_coefficient,
+        COALESCE(gs.guarantor_count, 0) > 0 AS has_guarantors,
+        COALESCE(gs.guarantor_count, 0)::INT AS guarantor_count
+    FROM base b
+    LEFT JOIN pledge_stats ps ON ps.contract_id = b.contract_id
+    LEFT JOIN guarantor_stats gs ON gs.contract_id = b.contract_id
+    ORDER BY coverage_coefficient DESC, b.contract_id;
+$$;
+
+CREATE OR REPLACE FUNCTION report_active_clients()
+RETURNS TABLE (
+    client_id INT,
+    client_display TEXT,
+    active_contracts_count INT,
+    total_issued_amount NUMERIC,
+    total_remaining_principal NUMERIC,
+    average_monthly_payment NUMERIC)
+LANGUAGE sql
+AS $$
+    WITH base AS (
+        SELECT
+            c.id AS contract_id,
+            cl.id AS client_id,
+            CASE
+                WHEN cl.client_type = 'legal' THEN lp.name
+                ELSE pp.full_name
+            END AS client_display,
+            c.contract_amount,
+            c.remaining_principal,
+            c.term_months,
+            c.issue_date,
+            COALESCE(c.fixed_interest_rate, 0) AS fixed_interest_rate
+        FROM contracts c
+        JOIN clients cl ON cl.id = c.client_id
+        LEFT JOIN legal_persons lp ON lp.client_id = cl.id
+        LEFT JOIN phys_persons pp ON pp.client_id = cl.id
+        WHERE c.status = 'Оформлен'
+    ),
+    monthly_pmt AS (
+        SELECT
+            b.contract_id,
+            AVG(s.expected_payment) AS avg_payment
+        FROM base b
+        CROSS JOIN LATERAL build_schedule(
+            b.contract_amount,
+            b.fixed_interest_rate / 100,
+            b.term_months,
+            b.issue_date) s
+        GROUP BY b.contract_id
+    )
+    SELECT
+        b.client_id,
+        b.client_display,
+        COUNT(*)::INT AS active_contracts_count,
+        ROUND(SUM(b.contract_amount), 2) AS total_issued_amount,
+        ROUND(SUM(b.remaining_principal), 2) AS total_remaining_principal,
+        ROUND(AVG(mp.avg_payment), 2) AS average_monthly_payment
+    FROM base b
+    LEFT JOIN monthly_pmt mp ON mp.contract_id = b.contract_id
+    GROUP BY b.client_id, b.client_display
+    ORDER BY total_remaining_principal DESC, b.client_display;
+$$;
+
+CREATE OR REPLACE FUNCTION report_credit_product_summary()
+RETURNS TABLE (
+    credit_id INT,
+    credit_name TEXT,
+    contracts_count INT,
+    total_issued_amount NUMERIC,
+    average_contract_amount NUMERIC,
+    average_term_months NUMERIC)
+LANGUAGE sql
+AS $$
+    SELECT
+        cr.id AS credit_id,
+        cr.name AS credit_name,
+        COUNT(*)::INT AS contracts_count,
+        ROUND(SUM(c.contract_amount), 2) AS total_issued_amount,
+        ROUND(AVG(c.contract_amount), 2) AS average_contract_amount,
+        ROUND(AVG(c.term_months), 2) AS average_term_months
+    FROM contracts c
+    JOIN credits cr ON cr.id = c.credit_id
+    WHERE c.status <> 'Оформляется'
+    GROUP BY cr.id, cr.name
+    ORDER BY contracts_count DESC, cr.name;
+$$;
+
+CREATE OR REPLACE FUNCTION report_nearing_completion_contracts(p_threshold_percent NUMERIC)
+RETURNS TABLE (
+    contract_id INT,
+    credit_name TEXT,
+    client_display TEXT,
+    contract_amount NUMERIC,
+    remaining_principal NUMERIC,
+    repaid_percent NUMERIC,
+    remaining_percent NUMERIC,
+    expected_completion_date DATE)
+LANGUAGE sql
+AS $$
+    WITH base AS (
+        SELECT
+            c.id AS contract_id,
+            cr.name AS credit_name,
+            CASE
+                WHEN cl.client_type = 'legal' THEN lp.name
+                ELSE pp.full_name
+            END AS client_display,
+            c.contract_amount,
+            c.remaining_principal,
+            c.term_months,
+            c.issue_date,
+            COALESCE(c.fixed_interest_rate, 0) AS fixed_interest_rate
+        FROM contracts c
+        JOIN credits cr ON cr.id = c.credit_id
+        JOIN clients cl ON cl.id = c.client_id
+        LEFT JOIN legal_persons lp ON lp.client_id = cl.id
+        LEFT JOIN phys_persons pp ON pp.client_id = cl.id
+        WHERE c.status <> 'Оформляется'
+          AND p_threshold_percent > 0
+          AND p_threshold_percent <= 100
+    )
+    SELECT
+        b.contract_id,
+        b.credit_name,
+        b.client_display,
+        ROUND(b.contract_amount, 2) AS contract_amount,
+        ROUND(b.remaining_principal, 2) AS remaining_principal,
+        ROUND((b.contract_amount - b.remaining_principal) * 100.0 / b.contract_amount, 2) AS repaid_percent,
+        ROUND(b.remaining_principal * 100.0 / b.contract_amount, 2) AS remaining_percent,
+        COALESCE(
+            (
+                SELECT MAX(s.planned_date)
+                FROM build_schedule(
+                    b.contract_amount,
+                    b.fixed_interest_rate / 100,
+                    b.term_months,
+                    b.issue_date) s
+            ),
+            b.issue_date
+        ) AS expected_completion_date
+    FROM base b
+    WHERE b.remaining_principal * 100.0 / b.contract_amount <= p_threshold_percent
+    ORDER BY repaid_percent DESC, b.contract_id;
+$$;
