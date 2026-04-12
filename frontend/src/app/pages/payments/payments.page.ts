@@ -58,7 +58,10 @@ export default class PaymentsPage implements OnInit {
 
   submit() {
     const id = this.contractId();
-    if (id === 0 || this.form.invalid) return;
+    if (id === 0 || this.form.invalid) {
+      return;
+    }
+
     const v = this.form.getRawValue();
     this.api.postPayment(id, { paymentDate: v.paymentDate, totalAmount: v.totalAmount }).subscribe({
       next: () => {

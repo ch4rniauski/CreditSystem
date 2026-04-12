@@ -82,7 +82,9 @@ export default class ContractsPage implements OnInit, OnDestroy {
         const sorted = opts.sort((a, b) => a.label.localeCompare(b.label));
         this.clientOptions.set(sorted);
         const first = sorted[0]?.id ?? 0;
-        if (first) this.form.patchValue({ clientId: first });
+        if (first) {
+          this.form.patchValue({ clientId: first });
+        }
       });
     });
   }
@@ -143,7 +145,10 @@ export default class ContractsPage implements OnInit, OnDestroy {
   }
 
   create() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      return;
+    }
+
     const v = this.form.getRawValue();
 
     const credit = this.credits().find((c) => c.id === Number(v.creditId));
@@ -226,7 +231,9 @@ export default class ContractsPage implements OnInit, OnDestroy {
 
   confirmSign() {
     const candidate = this.signCandidate();
-    if (!candidate) return;
+    if (!candidate) {
+      return;
+    }
 
     this.signing.set(true);
     this.api.signContract(candidate.id).subscribe({
@@ -249,7 +256,10 @@ export default class ContractsPage implements OnInit, OnDestroy {
   }
 
   remove(c: ContractRow) {
-    if (!confirm('Удалить черновик?')) return;
+    if (!confirm('Удалить черновик?')) {
+      return;
+    }
+
     this.api.deleteContract(c.id).subscribe({
       next: () => {
         this.error.set(null);
@@ -288,11 +298,6 @@ export default class ContractsPage implements OnInit, OnDestroy {
       this.closeDetails();
     }
   }
-
-  rateTypeLabel(value: string): string {
-    return value === 'floating' ? 'Плавающая' : 'Фиксированная';
-  }
-
   contractRateSummary(d: ContractDetailsDto): string {
     if (d.rateType === 'floating') {
       const additive = d.fixedAdditivePercent ?? 0;

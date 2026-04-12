@@ -83,7 +83,10 @@ export default class CurrenciesPage implements OnInit {
   }
 
   remove(r: CurrencyRow) {
-    if (!confirm(`Удалить ${r.code}?`)) return;
+    if (!confirm(`Удалить ${r.code}?`)) {
+      return;
+    }
+
     this.api.deleteCurrency(r.id).subscribe({
       next: () => this.reload(),
       error: (e) => this.error.set(typeof e.error === 'string' ? e.error : 'Невозможно удалить'),

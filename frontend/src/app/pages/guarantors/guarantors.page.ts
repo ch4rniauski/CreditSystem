@@ -23,7 +23,10 @@ export default class GuarantorsPage implements OnInit {
   readonly availablePhys = computed(() => {
     const contractId = this.selectedContractId();
     const ownerClientId = this.draftPhysContracts().find((c) => c.id === contractId)?.clientId;
-    if (!ownerClientId) return this.phys();
+    if (!ownerClientId) {
+      return this.phys();
+    }
+
     return this.phys().filter((p) => p.clientId !== ownerClientId);
   });
 
@@ -60,12 +63,18 @@ export default class GuarantorsPage implements OnInit {
   private ensureGuarantorSelection() {
     const options = this.availablePhys();
     const current = Number(this.form.getRawValue().physPersonClientId);
-    if (options.some((p) => p.clientId === current)) return;
+    if (options.some((p) => p.clientId === current)) {
+      return;
+    }
+
     this.form.patchValue({ physPersonClientId: options[0]?.clientId ?? 0 });
   }
 
   add() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      return;
+    }
+
     const v = this.form.getRawValue();
     this.api
       .createGuarantor({ contractId: Number(v.contractId), physPersonClientId: Number(v.physPersonClientId) })
@@ -80,7 +89,10 @@ export default class GuarantorsPage implements OnInit {
   }
 
   remove(g: GuarantorRow) {
-    if (!confirm('Удалить поручителя?')) return;
+    if (!confirm('Удалить поручителя?')) {
+      return;
+    }
+
     this.api.deleteGuarantor(g.internalId).subscribe({
       next: () => {
         this.error.set(null);

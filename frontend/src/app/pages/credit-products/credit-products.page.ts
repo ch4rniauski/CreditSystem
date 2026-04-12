@@ -1,6 +1,6 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, Component, computed, inject, OnInit, signal} from '@angular/core';
+import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
   ApiService,
   CreditCurrencyRow,
@@ -12,7 +12,7 @@ import {
   PenaltyRow,
   PenaltyWriteDto,
 } from '../../core/api.service';
-import { positiveDecimalValidator, nonNegativeValidator } from '../../core/validators';
+import {nonNegativeValidator} from '../../core/validators';
 
 @Component({
   selector: 'app-credit-products',
@@ -31,7 +31,7 @@ export default class CreditProductsPage implements OnInit {
   readonly ccRows = signal<CreditCurrencyRow[]>([]);
   readonly rateRows = signal<InterestRateRow[]>([]);
   readonly penRows = signal<PenaltyRow[]>([]);
-  
+
   // Section-specific errors
   readonly productError = signal<string | null>(null);
   readonly currenciesError = signal<string | null>(null);
@@ -52,19 +52,28 @@ export default class CreditProductsPage implements OnInit {
 
   private selectedProduct(): CreditProductRow | null {
     const id = this.selectedProductId();
-    if (id === null) return null;
+    if (id === null) {
+      return null;
+    }
+
     return this.products().find((p) => p.id === id) ?? null;
   }
 
   rateTermLimitsLabel(): string {
     const product = this.selectedProduct();
-    if (!product) return 'Срок в месяцах';
+    if (!product) {
+      return 'Срок в месяцах';
+    }
+
     return `Срок в месяцах (${product.minTermMonths}-${product.maxTermMonths})`;
   }
 
   private isRateTermWithinProductBounds(termFrom: number, termTo: number): boolean {
     const product = this.selectedProduct();
-    if (!product) return false;
+    if (!product) {
+      return false;
+    }
+
     return termFrom >= product.minTermMonths
       && termFrom <= product.maxTermMonths
       && termTo >= product.minTermMonths
@@ -73,10 +82,22 @@ export default class CreditProductsPage implements OnInit {
 
   private areRateRequiredFieldsFilled(): boolean {
     const v = this.rateForm.getRawValue();
-    if (Number(v.currencyId) < 1) return false;
-    if (!v.validFrom) return false;
-    if (v.termFromMonths < 1 || v.termToMonths < 1) return false;
-    if (v.rateType === 'fixed') return v.rateValue !== null;
+    if (Number(v.currencyId) < 1) {
+      return false;
+    }
+
+    if (!v.validFrom) {
+      return false;
+    }
+
+    if (v.termFromMonths < 1 || v.termToMonths < 1) {
+      return false;
+    }
+
+    if (v.rateType === 'fixed') {
+      return v.rateValue !== null;
+    }
+
     return v.additivePercent !== null;
   }
 
@@ -85,7 +106,10 @@ export default class CreditProductsPage implements OnInit {
     const isOwnTermsError = currentError === this.rateTermRangeError || currentError === this.rateTermBoundsError;
 
     if (!this.areRateRequiredFieldsFilled()) {
-      if (isOwnTermsError) this.interestRatesError.set(null);
+      if (isOwnTermsError) {
+        this.interestRatesError.set(null);
+      }
+
       return;
     }
 
@@ -100,18 +124,40 @@ export default class CreditProductsPage implements OnInit {
       return;
     }
 
-    if (isOwnTermsError) this.interestRatesError.set(null);
+    if (isOwnTermsError) {
+      this.interestRatesError.set(null);
+    }
   }
 
   canAddRate(): boolean {
-    if (this.selectedProductId() === null) return false;
+    if (this.selectedProductId() === null) {
+      return false;
+    }
+
     const v = this.rateForm.getRawValue();
-    if (Number(v.currencyId) < 1) return false;
-    if (!v.validFrom) return false;
-    if (v.termFromMonths < 1 || v.termToMonths < 1) return false;
-    if (v.termFromMonths > v.termToMonths) return false;
-    if (!this.isRateTermWithinProductBounds(v.termFromMonths, v.termToMonths)) return false;
-    if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) return false;
+    if (Number(v.currencyId) < 1) {
+      return false;
+    }
+
+    if (!v.validFrom) {
+      return false;
+    }
+
+    if (v.termFromMonths < 1 || v.termToMonths < 1) {
+      return false;
+    }
+
+    if (v.termFromMonths > v.termToMonths) {
+      return false;
+    }
+
+    if (!this.isRateTermWithinProductBounds(v.termFromMonths, v.termToMonths)) {
+      return false;
+    }
+
+    if (v.validTo && new Date(v.validFrom) > new Date(v.validTo)) {
+      return false;
+    }
 
     if (v.rateType === 'fixed') {
       return v.rateValue !== null && Number(v.rateValue) >= 0 && Number(v.rateValue) <= 9.9999;
@@ -257,14 +303,20 @@ export default class CreditProductsPage implements OnInit {
 
   reloadDetails() {
     const id = this.selectedProductId();
-    if (id === null) return;
+    if (id === null) {
+      return;
+    }
+
     this.api.creditCurrencies(id).subscribe((r) => this.ccRows.set(r));
     this.api.interestRates(id).subscribe((r) => this.rateRows.set(r));
     this.api.penalties(id).subscribe((r) => this.penRows.set(r));
   }
 
   saveProduct() {
-    if (this.productForm.invalid) return;
+    if (this.productForm.invalid) {
+      return;
+    }
+
     const v = this.productForm.getRawValue() as CreditProductWriteDto;
     const id = this.selectedProductId();
     if (id === null) {
@@ -294,10 +346,16 @@ export default class CreditProductsPage implements OnInit {
   }
 
   deleteProduct(p: CreditProductRow) {
-    if (!confirm(`Удалить продукт «${p.name}»?`)) return;
+    if (!confirm(`Удалить продукт «${p.name}»?`)) {
+      return;
+    }
+
     this.api.deleteCreditProduct(p.id).subscribe({
       next: () => {
-        if (this.selectedProductId() === p.id) this.clearProductSelection();
+        if (this.selectedProductId() === p.id) {
+          this.clearProductSelection();
+        }
+
         this.reloadProducts();
       },
       error: (e) => this.error.set(typeof e.error === 'string' ? e.error : 'Невозможно удалить'),
@@ -310,7 +368,10 @@ export default class CreditProductsPage implements OnInit {
 
   addCc() {
     const pid = this.selectedProductId();
-    if (pid === null || this.ccForm.invalid) return;
+    if (pid === null || this.ccForm.invalid) {
+      return;
+    }
+
     const v = this.ccForm.getRawValue();
     this.api.addCreditCurrency(pid, v).subscribe({
       next: () => {
@@ -324,15 +385,17 @@ export default class CreditProductsPage implements OnInit {
     });
   }
 
-  updateCc(currencyCode: string) {
-    // больше не редактируем базовую ставку, только удалять валютах продукта
-  }
-
   removeCc(currencyCode: string) {
-    if (!confirm('Удалить валюту из продукта?')) return;
+    if (!confirm('Удалить валюту из продукта?')) {
+      return;
+    }
+
     const pid = this.selectedProductId();
     const cid = this.currencyIdByCode(currencyCode);
-    if (pid === null || cid === null) return;
+    if (pid === null || cid === null) {
+      return;
+    }
+
     this.api.deleteCreditCurrency(pid, cid).subscribe({
       next: () => {
         this.error.set(null);
@@ -344,7 +407,10 @@ export default class CreditProductsPage implements OnInit {
 
   addRate() {
     const pid = this.selectedProductId();
-    if (pid === null || !this.canAddRate()) return;
+    if (pid === null || !this.canAddRate()) {
+      return;
+    }
+
     const v = this.rateForm.getRawValue();
 
     // Validate term range
@@ -401,7 +467,10 @@ export default class CreditProductsPage implements OnInit {
   }
 
   deleteRate(r: InterestRateRow) {
-    if (!confirm('Удалить процентную ставку?')) return;
+    if (!confirm('Удалить процентную ставку?')) {
+      return;
+    }
+
     this.api.deleteInterestRate(r.id).subscribe({
       next: () => {
         this.error.set(null);
@@ -412,14 +481,23 @@ export default class CreditProductsPage implements OnInit {
   }
 
   penaltyTypeLabel(type: string): string {
-    if (type === 'early_repayment') return 'Досрочное';
-    if (type === 'late_payment') return 'Просрочка';
+    if (type === 'early_repayment') {
+      return 'Досрочное';
+    }
+
+    if (type === 'late_payment') {
+      return 'Просрочка';
+    }
+
     return type;
   }
 
   addPenalty() {
     const pid = this.selectedProductId();
-    if (pid === null || this.penForm.invalid) return;
+    if (pid === null || this.penForm.invalid) {
+      return;
+    }
+
     const v = this.penForm.getRawValue();
     const body: PenaltyWriteDto = {
       creditId: pid,
@@ -440,7 +518,10 @@ export default class CreditProductsPage implements OnInit {
   }
 
   deletePenalty(p: PenaltyRow) {
-    if (!confirm('Удалить штраф?')) return;
+    if (!confirm('Удалить штраф?')) {
+      return;
+    }
+
     this.api.deletePenalty(p.id).subscribe({
       next: () => {
         this.error.set(null);
@@ -451,8 +532,14 @@ export default class CreditProductsPage implements OnInit {
   }
 
   rateTypeLabel(type: string): string {
-    if (type === 'fixed') return 'Фиксированная';
-    if (type === 'floating') return 'Плавающая';
+    if (type === 'fixed') {
+      return 'Фиксированная';
+    }
+
+    if (type === 'floating') {
+      return 'Плавающая';
+    }
+
     return type;
   }
 }

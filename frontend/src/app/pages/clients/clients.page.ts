@@ -61,7 +61,10 @@ export default class ClientsPage implements OnInit {
   }
 
   saveLegal() {
-    if (this.legalForm.invalid) return;
+    if (this.legalForm.invalid) {
+      return;
+    }
+
     const v = this.legalForm.getRawValue();
     const id = this.legalEditId();
     if (id === null) {
@@ -102,7 +105,10 @@ export default class ClientsPage implements OnInit {
   }
 
   savePhys() {
-    if (this.physForm.invalid) return;
+    if (this.physForm.invalid) {
+      return;
+    }
+
     const v = this.physForm.getRawValue();
     const id = this.physEditId();
     if (id === null) {
@@ -127,7 +133,10 @@ export default class ClientsPage implements OnInit {
   }
 
   deleteClient(clientId: number, label: string) {
-    if (!confirm(`Удалить «${label}»?`)) return;
+    if (!confirm(`Удалить «${label}»?`)) {
+      return;
+    }
+
     this.api.deleteClient(clientId).subscribe({
       next: () => {
         this.error.set(null);

@@ -46,9 +46,6 @@ export class ApiService {
   addCreditCurrency(creditId: number, body: CreditCurrencyWriteDto) {
     return this.http.post(`${this.base}/credit-products/${creditId}/currencies`, body);
   }
-  updateCreditCurrency(creditId: number, currencyId: number, body: CreditCurrencyWriteDto) {
-    return this.http.put(`${this.base}/credit-products/${creditId}/currencies/${currencyId}`, body);
-  }
   deleteCreditCurrency(creditId: number, currencyId: number) {
     return this.http.delete(`${this.base}/credit-products/${creditId}/currencies/${currencyId}`);
   }
@@ -59,9 +56,6 @@ export class ApiService {
   createInterestRate(body: InterestRateWriteDto) {
     return this.http.post<number>(`${this.base}/credit-products/interest-rates`, body);
   }
-  updateInterestRate(id: number, body: InterestRateWriteDto) {
-    return this.http.put(`${this.base}/interest-rates/${id}`, body);
-  }
   deleteInterestRate(id: number) {
     return this.http.delete(`${this.base}/interest-rates/${id}`);
   }
@@ -71,9 +65,6 @@ export class ApiService {
   }
   createPenalty(body: PenaltyWriteDto) {
     return this.http.post<number>(`${this.base}/credit-products/penalties`, body);
-  }
-  updatePenalty(id: number, body: PenaltyWriteDto) {
-    return this.http.put(`${this.base}/penalties/${id}`, body);
   }
   deletePenalty(id: number) {
     return this.http.delete(`${this.base}/penalties/${id}`);
@@ -136,9 +127,6 @@ export class ApiService {
   }
   createPledge(contractId: number, body: PledgeWriteDto) {
     return this.http.post<number>(`${this.base}/contracts/${contractId}/pledges`, body);
-  }
-  updatePledge(id: number, body: PledgeWriteDto) {
-    return this.http.put(`${this.base}/pledges/${id}`, body);
   }
   deletePledge(id: number) {
     return this.http.delete(`${this.base}/pledges/${id}`);

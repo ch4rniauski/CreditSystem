@@ -52,7 +52,9 @@ export default class ReportsPage implements OnInit {
     this.api.currencies().subscribe((c) => {
       this.currencies.set(c.map((x) => ({ id: x.id, code: x.code })));
       const first = c[0]?.id ?? 0;
-      if (first) this.r7Form.patchValue({ currencyId: first });
+      if (first) {
+        this.r7Form.patchValue({ currencyId: first });
+      }
     });
     this.api.contracts().subscribe((list) => {
       const ok = list.filter((x) => x.status !== 'Оформляется');
@@ -68,7 +70,10 @@ export default class ReportsPage implements OnInit {
   }
 
   runExpected() {
-    if (this.r7Form.invalid) return;
+    if (this.r7Form.invalid) {
+      return;
+    }
+
     const v = this.r7Form.getRawValue();
     this.api
       .reportExpectedPayments({
@@ -87,7 +92,10 @@ export default class ReportsPage implements OnInit {
 
   loadDebt() {
     const id = this.contractPick();
-    if (!id) return;
+    if (!id) {
+      return;
+    }
+
     this.api.reportCurrentDebt(id).subscribe({
       next: (d) => this.debt.set(d),
       error: () => this.debt.set(null),
@@ -96,13 +104,19 @@ export default class ReportsPage implements OnInit {
 
   loadCalendar() {
     const id = this.contractPick();
-    if (!id) return;
+    if (!id) {
+      return;
+    }
+
     this.api.reportPaymentCalendar(id).subscribe((c) => this.calendar.set(c));
   }
 
   loadHistory() {
     const id = this.historyCreditId();
-    if (!id) return;
+    if (!id) {
+      return;
+    }
+
     this.api.reportCreditHistory(id).subscribe((h) => this.history.set(h));
   }
 }

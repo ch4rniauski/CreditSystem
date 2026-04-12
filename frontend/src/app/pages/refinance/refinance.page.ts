@@ -35,7 +35,10 @@ export default class RefinancePage implements OnInit {
   }
 
   add() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      return;
+    }
+
     const v = this.form.getRawValue();
 
     if (v.validToDate && new Date(v.validFromDate) > new Date(v.validToDate)) {

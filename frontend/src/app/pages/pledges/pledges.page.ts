@@ -32,7 +32,9 @@ export default class PledgesPage implements OnInit {
     this.api.currencies().subscribe((c) => {
       this.currencies.set(c);
       const first = c[0]?.id ?? 0;
-      if (first) this.form.patchValue({ currencyId: first });
+      if (first) {
+        this.form.patchValue({ currencyId: first });
+      }
     });
 
     this.api.contracts().subscribe((list) => {
@@ -40,13 +42,17 @@ export default class PledgesPage implements OnInit {
       this.draftContracts.set(drafts);
       const first = drafts[0]?.id ?? 0;
       this.selectedContractId.set(first);
-      if (first) this.loadPledges(first);
+      if (first) {
+        this.loadPledges(first);
+      }
     });
   }
 
   pickContract(id: number) {
     this.selectedContractId.set(id);
-    if (id) this.loadPledges(id);
+    if (id) {
+      this.loadPledges(id);
+    }
   }
 
   loadPledges(contractId: number) {
@@ -55,7 +61,10 @@ export default class PledgesPage implements OnInit {
 
   add() {
     const cid = this.selectedContractId();
-    if (cid === 0 || this.form.invalid) return;
+    if (cid === 0 || this.form.invalid) {
+      return;
+    }
+
     this.api.createPledge(cid, this.form.getRawValue()).subscribe({
       next: () => {
         this.form.reset({
@@ -72,7 +81,10 @@ export default class PledgesPage implements OnInit {
   }
 
   remove(p: PledgeRow) {
-    if (!confirm('Удалить залог?')) return;
+    if (!confirm('Удалить залог?')) {
+      return;
+    }
+
     this.api.deletePledge(p.internalId).subscribe({
       next: () => this.loadPledges(this.selectedContractId()),
 

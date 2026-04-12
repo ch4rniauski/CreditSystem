@@ -57,7 +57,9 @@ public static class LoanScheduleEngine
         for (var d = last; d >= new DateOnly(y, m, 1); d = d.AddDays(-1))
         {
             if (IsWeekday(d))
+            {
                 return d;
+            }
         }
 
         return last;
@@ -70,7 +72,9 @@ public static class LoanScheduleEngine
         DateOnly issueDate)
     {
         if (principal <= 0 || termMonths <= 0)
+        {
             return Array.Empty<ScheduleLine>();
+        }
 
         decimal? SimulateEndBalance(decimal pmt)
         {
@@ -89,7 +93,9 @@ public static class LoanScheduleEngine
                 var interest = balance * annualRate / 365m * days;
                 var principalPart = pmt - interest;
                 if (principalPart < 0)
+                {
                     return null;
+                }
                 balance -= principalPart;
                 prevPayment = payDate;
             }
@@ -140,7 +146,10 @@ public static class LoanScheduleEngine
             var total = isLast ? bal + interest : monthlyPmt;
             var principalPart = total - interest;
             if (principalPart < 0)
+            {
                 principalPart = 0;
+            }
+
             if (isLast)
             {
                 principalPart = bal;
