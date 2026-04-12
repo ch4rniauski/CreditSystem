@@ -14,6 +14,63 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     {
     }
 
+    private async Task<(bool Ok, string? Error)> ValidateInterestRateWriteAsync(
+        int? excludeId,
+        InterestRateWriteDto dto,
+        CancellationToken ct)
+    {
+        var product = await Db.Credits.AsNoTracking().FirstOrDefaultAsync(c => c.Id == dto.CreditId, ct);
+        if (product is null)
+        {
+            return (false, "Кредитный продукт не найден.");
+        }
+
+        if (!await Db.CreditCurrencies.AsNoTracking()
+                .AnyAsync(cc => cc.CreditId == dto.CreditId && cc.CurrencyId == dto.CurrencyId, ct))
+        {
+            return (false, "Валюта не привязана к выбранному кредитному продукту.");
+        }
+
+        if (dto.TermFromMonths < 1)
+        {
+            return (false, "Срок 'от' должен быть больше 0.");
+        }
+
+        if (dto.TermToMonths < dto.TermFromMonths)
+        {
+            return (false, "Срок 'от' не может быть больше срока 'до'.");
+        }
+
+        if (dto.TermFromMonths < product.MinTermMonths || dto.TermToMonths > product.MaxTermMonths)
+        {
+            return (false,
+                "Сроки процентной ставки должны быть в пределах минимального и максимального срока кредитного продукта.");
+        }
+
+        if (dto.ValidTo is { } validTo && dto.ValidFrom > validTo)
+        {
+            return (false, "Дата начала периода не может быть позже даты окончания.");
+        }
+
+        var overlapExists = await Db.InterestRates.AsNoTracking().AnyAsync(r =>
+            r.Id != excludeId &&
+            r.CreditId == dto.CreditId &&
+            r.CurrencyId == dto.CurrencyId &&
+            r.TermFromMonths <= dto.TermToMonths &&
+            r.TermToMonths >= dto.TermFromMonths &&
+            r.ValidFrom <= dto.ValidFrom &&
+            (r.ValidTo == null || r.ValidTo >= dto.ValidFrom) &&
+            (dto.ValidTo == null || r.ValidFrom <= dto.ValidTo), ct);
+
+        if (overlapExists)
+        {
+            return (false,
+                "Эта ставка пересекается с уже существующей. Для одного продукта/валюты не должно быть пересечений по срокам и периоду действия.");
+        }
+
+        return (true, null);
+    }
+
     [HttpGet("credit-products")]
     public async Task<ActionResult<List<CreditProductRow>>> GetCreditProducts(CancellationToken ct)
     {
@@ -239,10 +296,10 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     public async Task<ActionResult<int>> CreateInterestRate([FromBody] InterestRateWriteDto dto,
         CancellationToken ct)
     {
-        if (!await Db.CreditCurrencies.AsNoTracking().AnyAsync(cc =>
-                cc.CreditId == dto.CreditId && cc.CurrencyId == dto.CurrencyId, ct))
+        var (ok, error) = await ValidateInterestRateWriteAsync(null, dto, ct);
+        if (!ok)
         {
-            return BadRequest("Сначала добавьте валюту к продукту.");
+            return BadRequest(new { error, section = "interestRates" });
         }
 
         decimal? rateValue = null;
@@ -338,6 +395,12 @@ public sealed class CreditProductsController : CreditSystemControllerBase
                 return BadRequest("Неверный тип ставки");
         }
 
+        var (ok, validationError) = await ValidateInterestRateWriteAsync(id, dto, ct);
+        if (!ok)
+        {
+            return BadRequest(new { error = validationError, section = "interestRates" });
+        }
+
         var oldVal = entity.RateType == "fixed" ? entity.RateValue : entity.AdditivePercent;
         var newVal = dto.RateType == "fixed" ? rateValue : additivePercent;
 
@@ -350,7 +413,7 @@ public sealed class CreditProductsController : CreditSystemControllerBase
             OldTermTo = entity.TermToMonths,
             NewTermFrom = dto.TermFromMonths,
             NewTermTo = dto.TermToMonths,
-            ChangeDate = DateTime.UtcNow
+            ChangeDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         });
 
         entity.CreditId = dto.CreditId;
@@ -453,7 +516,7 @@ public sealed class CreditProductsController : CreditSystemControllerBase
             PenaltyId = entity.Id,
             OldValue = entity.ValuePercent,
             NewValue = dto.ValuePercent,
-            ChangeDate = DateTime.UtcNow
+            ChangeDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         });
 
         entity.CreditId = dto.CreditId;

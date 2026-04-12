@@ -25,12 +25,18 @@ export default class ReportsPage implements OnInit {
   readonly credits = signal<CreditProductRow[]>([]);
   readonly currencies = signal<{ id: number; code: string }[]>([]);
   readonly expected = signal<ExpectedPaymentsReportLineDto[]>([]);
+  readonly expectedVisible = signal(false);
+  readonly expectedError = signal<string | null>(null);
   readonly reportContracts = signal<ContractRow[]>([]);
   readonly contractPick = signal(0);
   readonly debt = signal<CurrentDebtReportDto | null>(null);
+  readonly debtVisible = signal(false);
   readonly calendar = signal<PaymentCalendarLineDto[]>([]);
+  readonly calendarVisible = signal(false);
   readonly historyCreditId = signal(0);
   readonly history = signal<CreditHistoryEventDto[]>([]);
+  readonly historyVisible = signal(false);
+  readonly historyLoaded = signal(false);
 
   readonly r7Form = this.fb.nonNullable.group({
     creditId: [0, Validators.min(1)],
@@ -74,6 +80,7 @@ export default class ReportsPage implements OnInit {
       return;
     }
 
+    this.expectedError.set(null);
     const v = this.r7Form.getRawValue();
     this.api
       .reportExpectedPayments({
@@ -83,7 +90,22 @@ export default class ReportsPage implements OnInit {
         termMonths: v.termMonths,
         issueDate: v.issueDate,
       })
-      .subscribe((r) => this.expected.set(r));
+      .subscribe({
+        next: (r) => {
+          this.expected.set(r);
+          this.expectedVisible.set(true);
+        },
+        error: (e) => {
+          this.expected.set([]);
+          this.expectedVisible.set(false);
+          this.expectedError.set(typeof e.error === 'string' ? e.error : e.error?.error ?? 'Не удалось рассчитать ожидаемые платежи.');
+        },
+      });
+  }
+
+  hideExpected() {
+    this.expectedVisible.set(false);
+    this.expectedError.set(null);
   }
 
   pickContract(id: number) {
@@ -97,9 +119,16 @@ export default class ReportsPage implements OnInit {
     }
 
     this.api.reportCurrentDebt(id).subscribe({
-      next: (d) => this.debt.set(d),
+      next: (d) => {
+        this.debt.set(d);
+        this.debtVisible.set(true);
+      },
       error: () => this.debt.set(null),
     });
+  }
+
+  hideDebt() {
+    this.debtVisible.set(false);
   }
 
   loadCalendar() {
@@ -108,7 +137,14 @@ export default class ReportsPage implements OnInit {
       return;
     }
 
-    this.api.reportPaymentCalendar(id).subscribe((c) => this.calendar.set(c));
+    this.api.reportPaymentCalendar(id).subscribe((c) => {
+      this.calendar.set(c);
+      this.calendarVisible.set(true);
+    });
+  }
+
+  hideCalendar() {
+    this.calendarVisible.set(false);
   }
 
   loadHistory() {
@@ -117,6 +153,59 @@ export default class ReportsPage implements OnInit {
       return;
     }
 
-    this.api.reportCreditHistory(id).subscribe((h) => this.history.set(h));
+    this.historyVisible.set(true);
+    this.historyLoaded.set(false);
+
+    this.api.reportCreditHistory(id).subscribe({
+      next: (h) => {
+        this.history.set(h);
+        this.historyVisible.set(true);
+        this.historyLoaded.set(true);
+      },
+      error: () => {
+        this.history.set([]);
+        this.historyVisible.set(true);
+        this.historyLoaded.set(true);
+      },
+    });
+  }
+
+  hideHistory() {
+    this.historyVisible.set(false);
+  }
+
+  historyKindLabel(kind: string | null): string {
+    if (kind === 'interest_rate') {
+      return 'Процентная ставка';
+    }
+
+    if (kind === 'penalty') {
+      return 'Штраф';
+    }
+
+    return kind ?? '';
+  }
+
+  historyPenaltyLabel(penaltyType: string | null): string {
+    if (penaltyType === 'early_repayment') {
+      return 'досрочное погашение';
+    }
+
+    if (penaltyType === 'late_payment') {
+      return 'просрочка';
+    }
+
+    return '';
+  }
+
+  historyTypeLabel(kind: string | null, penaltyType: string | null): string {
+    const baseType = this.historyKindLabel(kind);
+    const penaltyLabel = this.historyPenaltyLabel(penaltyType);
+
+    if (baseType && penaltyLabel) {
+      return `${baseType} (${penaltyLabel})`;
+    }
+
+    return baseType || penaltyLabel;
   }
 }

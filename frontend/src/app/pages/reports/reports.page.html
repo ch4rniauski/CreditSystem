@@ -24,7 +24,13 @@
         <label>Дата договора <input type="date" formControlName="issueDate" /></label>
         <button type="submit" [disabled]="r7Form.invalid">Рассчитать</button>
       </form>
-      @if (expected().length) {
+      @if (expectedError()) {
+        <p class="err">{{ expectedError() }}</p>
+      }
+      @if (expectedVisible() && expected().length) {
+        <div class="report-actions report-actions-inline">
+          <button type="button" (click)="hideExpected()">Скрыть</button>
+        </div>
         <table>
           <thead>
             <tr>
@@ -37,7 +43,7 @@
             @for (r of expected(); track r.installmentNumber) {
               <tr>
                 <td>{{ r.installmentNumber }}</td>
-                <td>{{ r.plannedDate }}</td>
+                <td>{{ r.plannedDate | date: 'dd.MM.yyyy' }}</td>
                 <td>{{ r.expectedPayment | number: '1.2-2' }}</td>
               </tr>
             }
@@ -47,7 +53,7 @@
     </section>
 
     <section class="panel">
-      <h2>8–9. Текущий долг и календарь платежей</h2>
+      <h2>8. Текущий долг по кредиту</h2>
       <label
         >Договор
         <select [value]="contractPick()" (change)="pickContract(+$any($event.target).value)">
@@ -56,10 +62,14 @@
           }
         </select>
       </label>
-      <button type="button" (click)="loadDebt()" [disabled]="contractPick() === 0">Обновить долг</button>
-      <button type="button" (click)="loadCalendar()" [disabled]="contractPick() === 0">Обновить календарь</button>
+      <div class="report-actions">
+        <button type="button" (click)="loadDebt()" [disabled]="contractPick() === 0">Обновить долг</button>
+        @if (debtVisible() && debt()) {
+          <button type="button" (click)="hideDebt()">Скрыть</button>
+        }
+      </div>
 
-      @if (debt()) {
+      @if (debtVisible() && debt()) {
         <h3>Текущий долг</h3>
         <ul>
           <li>Штраф просрочки: {{ debt()!.latePenaltyAccrued | number: '1.2-2' }}</li>
@@ -68,8 +78,26 @@
           <li>Остаток основного долга: {{ debt()!.remainingPrincipal | number: '1.2-2' }}</li>
         </ul>
       }
-      @if (calendar().length) {
-        <h3>Календарь</h3>
+    </section>
+
+    <section class="panel">
+      <h2>9. Календарь платежей по договору</h2>
+      <label
+        >Договор
+        <select [value]="contractPick()" (change)="pickContract(+$any($event.target).value)">
+          @for (c of reportContracts(); track c.id) {
+            <option [value]="c.id">{{ c.creditName }} — {{ c.clientDisplay }} ({{ c.status }})</option>
+          }
+        </select>
+      </label>
+      <div class="report-actions">
+        <button type="button" (click)="loadCalendar()" [disabled]="contractPick() === 0">Обновить календарь</button>
+        @if (calendarVisible() && calendar().length) {
+          <button type="button" (click)="hideCalendar()">Скрыть</button>
+        }
+      </div>
+
+      @if (calendarVisible() && calendar().length) {
         <table>
           <thead>
             <tr>
@@ -105,8 +133,13 @@
           }
         </select>
       </label>
-      <button type="button" (click)="loadHistory()">Загрузить</button>
-      @if (history().length) {
+      <div class="report-actions">
+        <button type="button" (click)="loadHistory()">Загрузить</button>
+        @if (historyVisible() && history().length) {
+          <button type="button" (click)="hideHistory()">Скрыть</button>
+        }
+      </div>
+      @if (historyVisible() && history().length) {
         <table>
           <thead>
             <tr>
@@ -116,28 +149,29 @@
               <th>Было</th>
               <th>Стало</th>
               <th>Сроки</th>
-              <th>Штраф</th>
             </tr>
           </thead>
           <tbody>
             @for (h of history(); track $index) {
               <tr>
                 <td>{{ h.changeDate | date: 'dd.MM.yyyy' }}</td>
-                <td>{{ h.kind }}</td>
-                <td>{{ h.currencyCode ?? '—' }}</td>
+                <td>{{ historyTypeLabel(h.kind, h.penaltyType) }}</td>
+                <td>{{ h.currencyCode }}</td>
                 <td>{{ h.oldValuePercent }}</td>
                 <td>{{ h.newValuePercent }}</td>
                 <td>
-                  @if (h.oldTermFrom != null) {
+                  @if (h.oldTermFrom != null && h.oldTermTo != null && h.newTermFrom != null && h.newTermTo != null) {
                     {{ h.oldTermFrom }}-{{ h.oldTermTo }} → {{ h.newTermFrom }}-{{ h.newTermTo }}
                   } @else {
-                    —
+                    
                   }
                 </td>
-                <td>{{ h.penaltyType ?? '—' }}</td>
               </tr>
             }
           </tbody>
         </table>
+      }
+      @if (historyVisible() && historyLoaded() && history().length === 0) {
+        <p>История изменений для выбранного продукта отсутствует.</p>
       }
     </section>
