@@ -19,14 +19,17 @@ public partial class CurrenciesController : CreditSystemControllerBase
 
     private static bool TryNormalizeCurrencyCode(string code, out string normalized)
     {
-        normalized = code.Trim().ToUpperInvariant();
+        normalized = code
+            .Trim()
+            .ToUpperInvariant();
         return CurrencyCodeRegex.IsMatch(normalized);
     }
 
     [HttpGet]
     public async Task<ActionResult<List<CurrencyRow>>> GetCurrencies(CancellationToken ct)
     {
-        var list = await Db.Currencies.AsNoTracking()
+        var list = await Db.Currencies
+            .AsNoTracking()
             .OrderBy(c => c.Code)
             .Select(c => new CurrencyRow(c.Id, c.Code, c.Name))
             .ToListAsync(ct);
@@ -49,7 +52,7 @@ public partial class CurrenciesController : CreditSystemControllerBase
         }
         catch (DbUpdateException ex)
         {
-            if (ex.InnerException is NpgsqlException npg && npg.SqlState == "23505")
+            if (ex.InnerException is NpgsqlException { SqlState: "23505" })
             {
                 return Conflict("Валюта с таким кодом уже существует.");
             }
@@ -82,7 +85,7 @@ public partial class CurrenciesController : CreditSystemControllerBase
         }
         catch (DbUpdateException ex)
         {
-            if (ex.InnerException is NpgsqlException npg && npg.SqlState == "23505")
+            if (ex.InnerException is NpgsqlException { SqlState: "23505" })
             {
                 return Conflict("Валюта с таким кодом уже существует.");
             }
@@ -96,8 +99,12 @@ public partial class CurrenciesController : CreditSystemControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteCurrency(int id, CancellationToken ct)
     {
-        var used = await Db.Contracts.AsNoTracking().AnyAsync(c => c.CurrencyId == id, ct) ||
-                   await Db.CreditCurrencies.AsNoTracking().AnyAsync(cc => cc.CurrencyId == id, ct);
+        var used = await Db.Contracts
+            .AsNoTracking()
+            .AnyAsync(c => c.CurrencyId == id, ct) ||
+                   await Db.CreditCurrencies
+                       .AsNoTracking()
+                       .AnyAsync(cc => cc.CurrencyId == id, ct);
         if (used)
         {
             return Conflict("Валюта используется.");

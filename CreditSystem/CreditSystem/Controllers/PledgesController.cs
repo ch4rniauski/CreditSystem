@@ -16,7 +16,8 @@ public sealed class PledgesController : CreditSystemControllerBase
     [HttpGet("contracts/{contractId:int}/pledges")]
     public async Task<ActionResult<List<PledgeRow>>> GetPledges(int contractId, CancellationToken ct)
     {
-        var list = await Db.Pledges.AsNoTracking()
+        var list = await Db.Pledges
+            .AsNoTracking()
             .Join(Db.Currencies.AsNoTracking(), p => p.CurrencyId, cu => cu.Id, (p, cu) => new { p, cu })
             .Where(x => x.p.ContractId == contractId)
             .Select(x => new PledgeRow(x.p.Id, x.p.PropertyName, x.p.EstimatedValue, x.p.AssessmentDate,
@@ -40,7 +41,9 @@ public sealed class PledgesController : CreditSystemControllerBase
             return Conflict();
         }
 
-        if (!await Db.Currencies.AsNoTracking().AnyAsync(x => x.Id == dto.CurrencyId, ct))
+        if (!await Db.Currencies
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == dto.CurrencyId, ct))
         {
             return BadRequest("Валюта не найдена");
         }
@@ -62,7 +65,9 @@ public sealed class PledgesController : CreditSystemControllerBase
     [HttpPut("pledges/{id:int}")]
     public async Task<IActionResult> UpdatePledge(int id, [FromBody] PledgeWriteDto dto, CancellationToken ct)
     {
-        var pledge = await Db.Pledges.Include(x => x.Contract).FirstOrDefaultAsync(x => x.Id == id, ct);
+        var pledge = await Db.Pledges
+            .Include(x => x.Contract)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (pledge is null)
         {
             return NotFound();
@@ -84,7 +89,9 @@ public sealed class PledgesController : CreditSystemControllerBase
     [HttpDelete("pledges/{id:int}")]
     public async Task<IActionResult> DeletePledge(int id, CancellationToken ct)
     {
-        var pledge = await Db.Pledges.Include(x => x.Contract).FirstOrDefaultAsync(x => x.Id == id, ct);
+        var pledge = await Db.Pledges
+            .Include(x => x.Contract)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (pledge is null)
         {
             return NotFound();

@@ -28,7 +28,9 @@ public sealed class GuarantorsController : CreditSystemControllerBase
     [HttpPost]
     public async Task<ActionResult<int>> CreateGuarantor([FromBody] GuarantorCreateDto dto, CancellationToken ct)
     {
-        var contract = await Db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == dto.ContractId, ct);
+        var contract = await Db.Contracts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == dto.ContractId, ct);
         if (contract is null)
         {
             return NotFound();
@@ -39,7 +41,8 @@ public sealed class GuarantorsController : CreditSystemControllerBase
             return Conflict("Только для черновика договора.");
         }
 
-        var clientType = await Db.Clients.AsNoTracking()
+        var clientType = await Db.Clients
+            .AsNoTracking()
             .Where(cl => cl.Id == contract.ClientId)
             .Select(cl => cl.ClientType)
             .FirstOrDefaultAsync(ct);
@@ -48,8 +51,9 @@ public sealed class GuarantorsController : CreditSystemControllerBase
             return BadRequest("Поручители только для физлиц.");
         }
 
-        var exists =
-            await Db.Guarantors.AsNoTracking().AnyAsync(g =>
+        var exists = await Db.Guarantors
+            .AsNoTracking()
+            .AnyAsync(g =>
                 g.ContractId == dto.ContractId && g.PhysPersonId == dto.PhysPersonClientId, ct);
         if (exists)
         {
@@ -73,7 +77,9 @@ public sealed class GuarantorsController : CreditSystemControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> UpdateGuarantor(int id, [FromBody] GuarantorCreateDto dto, CancellationToken ct)
     {
-        var guarantor = await Db.Guarantors.Include(g => g.Contract).FirstOrDefaultAsync(g => g.Id == id, ct);
+        var guarantor = await Db.Guarantors
+            .Include(g => g.Contract)
+            .FirstOrDefaultAsync(g => g.Id == id, ct);
         if (guarantor is null)
         {
             return NotFound();
@@ -84,7 +90,9 @@ public sealed class GuarantorsController : CreditSystemControllerBase
             return Conflict("Только для черновика договора.");
         }
 
-        var contract = await Db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == dto.ContractId, ct);
+        var contract = await Db.Contracts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == dto.ContractId, ct);
         if (contract is null)
         {
             return NotFound();
@@ -95,7 +103,8 @@ public sealed class GuarantorsController : CreditSystemControllerBase
             return Conflict("Только для черновика договора.");
         }
 
-        var clientType = await Db.Clients.AsNoTracking()
+        var clientType = await Db.Clients
+            .AsNoTracking()
             .Where(cl => cl.Id == contract.ClientId)
             .Select(cl => cl.ClientType)
             .FirstOrDefaultAsync(ct);
@@ -104,8 +113,10 @@ public sealed class GuarantorsController : CreditSystemControllerBase
             return BadRequest("Поручители только для физлиц.");
         }
 
-        var duplicate = await Db.Guarantors.AsNoTracking().AnyAsync(g =>
-            g.Id != id && g.ContractId == dto.ContractId && g.PhysPersonId == dto.PhysPersonClientId, ct);
+        var duplicate = await Db.Guarantors
+            .AsNoTracking()
+            .AnyAsync(g =>
+                g.Id != id && g.ContractId == dto.ContractId && g.PhysPersonId == dto.PhysPersonClientId, ct);
         if (duplicate)
         {
             return Conflict("Уже добавлен.");
@@ -128,7 +139,9 @@ public sealed class GuarantorsController : CreditSystemControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> DeleteGuarantor(int id, CancellationToken ct)
     {
-        var guarantor = await Db.Guarantors.Include(x => x.Contract).FirstOrDefaultAsync(x => x.Id == id, ct);
+        var guarantor = await Db.Guarantors
+            .Include(x => x.Contract)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (guarantor is null)
         {
             return NotFound();

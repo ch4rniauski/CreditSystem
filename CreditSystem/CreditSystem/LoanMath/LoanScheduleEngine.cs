@@ -1,9 +1,5 @@
 namespace CreditSystem.LoanMath;
 
-/// <summary>
-/// Annuity schedule: daily interest (annual/365) on remaining principal; payment on last weekday (Mon-Fri) of each month.
-/// First accrual day = first day of month after issue month.
-/// </summary>
 public static class LoanScheduleEngine
 {
     public const decimal Epsilon = 0.01m;
@@ -65,6 +61,39 @@ public static class LoanScheduleEngine
         return last;
     }
 
+    private static decimal? SimulateEndBalance(
+        decimal principal,
+        decimal annualRate,
+        int termMonths,
+        DateOnly issueDate,
+        decimal pmt)
+    {
+        var balance = principal;
+        DateOnly? prevPayment = null;
+
+        for (var i = 0; i < termMonths; i++)
+        {
+            var anchor = FirstAccrualDate(issueDate).AddMonths(i);
+            var payDate = LastWorkingDayOfMonth(anchor);
+
+            var accrualStart = i == 0
+                ? FirstAccrualDate(issueDate)
+                : prevPayment!.Value.AddDays(1);
+            var days = Math.Max(1, payDate.DayNumber - accrualStart.DayNumber + 1);
+            var interest = balance * annualRate / 365m * days;
+            var principalPart = pmt - interest;
+            if (principalPart < 0)
+            {
+                return null;
+            }
+
+            balance -= principalPart;
+            prevPayment = payDate;
+        }
+
+        return balance;
+    }
+
     public static IReadOnlyList<ScheduleLine> BuildSchedule(
         decimal principal,
         decimal annualRate,
@@ -73,34 +102,7 @@ public static class LoanScheduleEngine
     {
         if (principal <= 0 || termMonths <= 0)
         {
-            return Array.Empty<ScheduleLine>();
-        }
-
-        decimal? SimulateEndBalance(decimal pmt)
-        {
-            var balance = principal;
-            DateOnly? prevPayment = null;
-
-            for (var i = 0; i < termMonths; i++)
-            {
-                var anchor = FirstAccrualDate(issueDate).AddMonths(i);
-                var payDate = LastWorkingDayOfMonth(anchor);
-
-                var accrualStart = i == 0
-                    ? FirstAccrualDate(issueDate)
-                    : prevPayment!.Value.AddDays(1);
-                var days = Math.Max(1, payDate.DayNumber - accrualStart.DayNumber + 1);
-                var interest = balance * annualRate / 365m * days;
-                var principalPart = pmt - interest;
-                if (principalPart < 0)
-                {
-                    return null;
-                }
-                balance -= principalPart;
-                prevPayment = payDate;
-            }
-
-            return balance;
+            return [];
         }
 
         var pmtLow = 0m;
@@ -109,7 +111,7 @@ public static class LoanScheduleEngine
         for (var iter = 0; iter < 90; iter++)
         {
             var mid = (pmtLow + pmtHigh) / 2m;
-            var end = SimulateEndBalance(mid);
+            var end = SimulateEndBalance(principal, annualRate, termMonths, issueDate, mid);
             if (end is null)
             {
                 pmtLow = mid;

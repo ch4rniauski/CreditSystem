@@ -3,14 +3,8 @@ using Npgsql;
 
 namespace CreditSystem.Helpers;
 
-/// <summary>
-/// Handles PostgreSQL constraint violation errors and maps them to user-friendly messages.
-/// </summary>
 public static class ConstraintErrorHandler
 {
-    /// <summary>
-    /// Extracts and translates constraint error message from DbUpdateException.
-    /// </summary>
     private static (string? Message, string? Section) TryParseConstraintError(DbUpdateException ex)
     {
         if (ex.InnerException is not PostgresException pgEx)
@@ -122,9 +116,6 @@ public static class ConstraintErrorHandler
         };
     }
 
-    /// <summary>
-    /// Gets the error message from a constraint violation.
-    /// </summary>
     public static (string? Message, string? Section) GetConstraintError(DbUpdateException ex)
     {
         var (message, section) = TryParseConstraintError(ex);

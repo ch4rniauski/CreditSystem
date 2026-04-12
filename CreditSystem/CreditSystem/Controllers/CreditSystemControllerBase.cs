@@ -25,7 +25,8 @@ public abstract class CreditSystemControllerBase : ControllerBase
 
     private async Task<RefinanceRate?> ResolveRefinance(DateOnly issueDate, CancellationToken ct)
     {
-        return await Db.RefinanceRates.AsNoTracking()
+        return await Db.RefinanceRates
+            .AsNoTracking()
             .Where(r => r.ValidFromDate <= issueDate &&
                         (r.ValidToDate == null || r.ValidToDate >= issueDate))
             .OrderByDescending(r => r.ValidFromDate)
@@ -69,13 +70,15 @@ public abstract class CreditSystemControllerBase : ControllerBase
     protected async Task<(decimal? early, decimal? late)> ResolvePenaltiesAtIssue(int creditId, DateOnly issueDate,
         CancellationToken ct)
     {
-        var early = await Db.Penalties.AsNoTracking()
+        var early = await Db.Penalties
+            .AsNoTracking()
             .Where(p => p.CreditId == creditId && p.PenaltyType == "early_repayment" && p.ValidFrom <= issueDate)
             .OrderByDescending(p => p.ValidFrom)
             .Select(p => (decimal?)p.ValuePercent)
             .FirstOrDefaultAsync(ct);
 
-        var late = await Db.Penalties.AsNoTracking()
+        var late = await Db.Penalties
+            .AsNoTracking()
             .Where(p => p.CreditId == creditId && p.PenaltyType == "late_payment" && p.ValidFrom <= issueDate)
             .OrderByDescending(p => p.ValidFrom)
             .Select(p => (decimal?)p.ValuePercent)
@@ -87,13 +90,16 @@ public abstract class CreditSystemControllerBase : ControllerBase
     protected async Task<(bool Ok, string? Error, (decimal Annual, int InterestRateId, string RateType, decimal? Additive)? Terms)>
         TryResolveTerms(int creditId, int currencyId, int termMonths, DateOnly issueDate, CancellationToken ct)
     {
-        var credit = await Db.Credits.AsNoTracking().FirstOrDefaultAsync(c => c.Id == creditId, ct);
+        var credit = await Db.Credits
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == creditId, ct);
         if (credit is null)
         {
             return (false, "Кредитный продукт не найден.", null);
         }
 
-        if (!await Db.CreditCurrencies.AsNoTracking()
+        if (!await Db.CreditCurrencies
+                .AsNoTracking()
                 .AnyAsync(cc => cc.CreditId == creditId && cc.CurrencyId == currencyId, ct))
         {
             return (false, "Валюта не привязана к выбранному кредитному продукту.", null);
@@ -104,7 +110,8 @@ public abstract class CreditSystemControllerBase : ControllerBase
             return (false, $"Срок должен быть в диапазоне {credit.MinTermMonths} - {credit.MaxTermMonths} месяцев.", null);
         }
 
-        var matchedRates = await Db.InterestRates.AsNoTracking()
+        var matchedRates = await Db.InterestRates
+            .AsNoTracking()
             .Where(r => r.CreditId == creditId &&
                         r.CurrencyId == currencyId &&
                         termMonths >= r.TermFromMonths && termMonths <= r.TermToMonths &&
@@ -124,19 +131,23 @@ public abstract class CreditSystemControllerBase : ControllerBase
         var row = matchedRates.FirstOrDefault();
         if (row is null)
         {
-            var anyTermForCurrency = await Db.InterestRates.AsNoTracking().AnyAsync(r =>
-                r.CreditId == creditId && r.CurrencyId == currencyId &&
-                termMonths >= r.TermFromMonths && termMonths <= r.TermToMonths,
-                ct);
+            var anyTermForCurrency = await Db.InterestRates
+                .AsNoTracking()
+                .AnyAsync(r =>
+                    r.CreditId == creditId && r.CurrencyId == currencyId &&
+                    termMonths >= r.TermFromMonths && termMonths <= r.TermToMonths,
+                    ct);
             if (!anyTermForCurrency)
             {
                 return (false, "Нет процентной ставки для указанного срока в этой валюте.", null);
             }
 
-            var anyValidDate = await Db.InterestRates.AsNoTracking().AnyAsync(r =>
-                r.CreditId == creditId && r.CurrencyId == currencyId &&
-                r.ValidFrom <= issueDate && (r.ValidTo == null || r.ValidTo >= issueDate),
-                ct);
+            var anyValidDate = await Db.InterestRates
+                .AsNoTracking()
+                .AnyAsync(r =>
+                    r.CreditId == creditId && r.CurrencyId == currencyId &&
+                    r.ValidFrom <= issueDate && (r.ValidTo == null || r.ValidTo >= issueDate),
+                    ct);
             if (!anyValidDate)
             {
                 return (false, "Нет действующей процентной ставки на указанную дату.", null);

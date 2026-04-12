@@ -23,7 +23,11 @@ public class ClientsController : CreditSystemControllerBase
         var phys = await Db.PhysPersons.AsNoTracking()
             .Select(p => new ClientListItemDto(p.ClientId, "Физическое", p.FullName, p.Phone))
             .ToListAsync(ct);
-        return Ok(legals.Concat(phys).OrderBy(c => c.DisplayName).ToList());
+        var list = legals
+            .Concat(phys)
+            .OrderBy(c => c.DisplayName)
+            .ToList();
+        return Ok(list);
     }
 
     [HttpGet("legal")]
@@ -78,7 +82,8 @@ public class ClientsController : CreditSystemControllerBase
     [HttpGet("physical")]
     public async Task<ActionResult<List<PhysicalClientRow>>> GetPhysicalClients(CancellationToken ct)
     {
-        var list = await Db.PhysPersons.AsNoTracking()
+        var list = await Db.PhysPersons
+            .AsNoTracking()
             .OrderBy(p => p.FullName)
             .Select(p => new PhysicalClientRow(p.ClientId, p.FullName, p.PassportSeries, p.PassportNumber,
                 p.ActualAddress,
@@ -92,7 +97,9 @@ public class ClientsController : CreditSystemControllerBase
         CancellationToken ct)
     {
         await using var tx = await Db.Database.BeginTransactionAsync(ct);
-        var passportSeries = dto.PassportSeries.Trim().ToUpperInvariant();
+        var passportSeries = dto.PassportSeries
+            .Trim()
+            .ToUpperInvariant();
         var passportNumber = dto.PassportNumber.Trim();
         var client = new Client { ClientType = "physical" };
         Db.Clients.Add(client);
@@ -129,7 +136,9 @@ public class ClientsController : CreditSystemControllerBase
             return NotFound();
         }
 
-        var passportSeries = dto.PassportSeries.Trim().ToUpperInvariant();
+        var passportSeries = dto.PassportSeries
+            .Trim()
+            .ToUpperInvariant();
         var passportNumber = dto.PassportNumber.Trim();
         phys.FullName = dto.FullName;
         phys.PassportSeries = passportSeries;
@@ -151,12 +160,16 @@ public class ClientsController : CreditSystemControllerBase
     [HttpDelete("{clientId:int}")]
     public async Task<IActionResult> DeleteClient(int clientId, CancellationToken ct)
     {
-        if (await Db.Contracts.AsNoTracking().AnyAsync(co => co.ClientId == clientId, ct))
+        if (await Db.Contracts
+                .AsNoTracking()
+                .AnyAsync(co => co.ClientId == clientId, ct))
         {
             return Conflict("У клиента есть договоры.");
         }
 
-        var client = await Db.Clients.Include(cl => cl.LegalPerson).Include(cl => cl.PhysPerson)
+        var client = await Db.Clients
+            .Include(cl => cl.LegalPerson)
+            .Include(cl => cl.PhysPerson)
             .FirstOrDefaultAsync(cl => cl.Id == clientId, ct);
         if (client is null)
         {

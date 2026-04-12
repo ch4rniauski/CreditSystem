@@ -31,15 +31,19 @@ public sealed class ReportsController : CreditSystemControllerBase
 
         var annual = AnnualFractionFromPercent(terms!.Value.Annual);
         var schedule = LoanScheduleEngine.BuildSchedule(contractAmount, annual, termMonths, issueDate);
-        var list = schedule.Select(l => new ExpectedPaymentsReportLineDto(l.InstallmentIndex + 1, l.PlannedPaymentDate,
-            l.ScheduledTotalPayment)).ToList();
+        var list = schedule
+            .Select(l => new ExpectedPaymentsReportLineDto(l.InstallmentIndex + 1, l.PlannedPaymentDate,
+                l.ScheduledTotalPayment))
+            .ToList();
         return Ok(list);
     }
 
     [HttpGet("contracts/{id:int}/reports/current-debt")]
     public async Task<ActionResult<CurrentDebtReportDto>> ReportCurrentDebt(int id, CancellationToken ct)
     {
-        var contract = await Db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+        var contract = await Db.Contracts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract is null)
         {
             return NotFound();
@@ -60,7 +64,8 @@ public sealed class ReportsController : CreditSystemControllerBase
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual!.Value, contract.TermMonths,
             contract.IssueDate);
 
-        var lastPayDate = await Db.Payments.AsNoTracking()
+        var lastPayDate = await Db.Payments
+            .AsNoTracking()
             .Where(p => p.ContractId == id)
             .OrderByDescending(p => p.PaymentDate)
             .Select(p => (DateOnly?)p.PaymentDate)
@@ -73,8 +78,9 @@ public sealed class ReportsController : CreditSystemControllerBase
         var interestDue = decimal.Round(contract.RemainingPrincipal * annual.Value / 365m * days, 2,
             MidpointRounding.AwayFromZero);
 
-        var paidCount =
-            await Db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
+        var paidCount = await Db.Payments
+            .AsNoTracking()
+            .CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
         decimal principalDue;
         decimal latePen = 0;
         if (paidCount < schedule.Count)
@@ -109,7 +115,9 @@ public sealed class ReportsController : CreditSystemControllerBase
     public async Task<ActionResult<List<PaymentCalendarLineDto>>> ReportPaymentCalendar(int id,
         CancellationToken ct)
     {
-        var contract = await Db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+        var contract = await Db.Contracts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract is null)
         {
             return NotFound();
@@ -119,7 +127,8 @@ public sealed class ReportsController : CreditSystemControllerBase
         var schedule = LoanScheduleEngine.BuildSchedule(contract.ContractAmount, annual, contract.TermMonths,
             contract.IssueDate);
 
-        var payments = await Db.Payments.AsNoTracking()
+        var payments = await Db.Payments
+            .AsNoTracking()
             .Where(p => p.ContractId == id && p.PaymentType == "monthly")
             .ToListAsync(ct);
 
@@ -158,7 +167,8 @@ public sealed class ReportsController : CreditSystemControllerBase
     public async Task<ActionResult<List<CreditHistoryEventDto>>> ReportCreditHistory(int creditId,
         CancellationToken ct)
     {
-        var rateEvents = await Db.RatesHistories.AsNoTracking()
+        var rateEvents = await Db.RatesHistories
+            .AsNoTracking()
             .Join(Db.InterestRates.AsNoTracking(), h => h.InterestRateId, r => r.Id, (h, r) => new { h, r })
             .Where(x => x.r.CreditId == creditId)
             .Join(Db.Currencies.AsNoTracking(), x => x.r.CurrencyId, cu => cu.Id, (x, cu) => new { x.h, cu.Code })
@@ -175,7 +185,8 @@ public sealed class ReportsController : CreditSystemControllerBase
                 null))
             .ToListAsync(ct);
 
-        var penEvents = await Db.PenaltiesHistories.AsNoTracking()
+        var penEvents = await Db.PenaltiesHistories
+            .AsNoTracking()
             .Join(Db.Penalties.AsNoTracking(), h => h.PenaltyId, p => p.Id, (h, p) => new { h, p })
             .Where(x => x.p.CreditId == creditId)
             .Select(z => new CreditHistoryEventDto(
@@ -191,7 +202,10 @@ public sealed class ReportsController : CreditSystemControllerBase
                 z.p.PenaltyType))
             .ToListAsync(ct);
 
-        var all = rateEvents.Concat(penEvents).OrderByDescending(e => e.ChangeDate).ToList();
+        var all = rateEvents
+            .Concat(penEvents)
+            .OrderByDescending(e => e.ChangeDate)
+            .ToList();
         return Ok(all);
     }
 }

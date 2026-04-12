@@ -17,12 +17,15 @@ public sealed class PaymentsController : CreditSystemControllerBase
     [HttpGet("")]
     public async Task<ActionResult<List<PaymentRow>>> GetPayments(int id, CancellationToken ct)
     {
-        if (!await Db.Contracts.AsNoTracking().AnyAsync(c => c.Id == id, ct))
+        if (!await Db.Contracts
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == id, ct))
         {
             return NotFound();
         }
 
-        var list = await Db.Payments.AsNoTracking()
+        var list = await Db.Payments
+            .AsNoTracking()
             .Where(p => p.ContractId == id)
             .OrderByDescending(p => p.PaymentDate)
             .ThenByDescending(p => p.Id)
@@ -46,7 +49,9 @@ public sealed class PaymentsController : CreditSystemControllerBase
     private static (DateOnly MonthStart, DateOnly MonthEnd) GetMonthBounds(DateOnly date)
     {
         var monthStart = new DateOnly(date.Year, date.Month, 1);
-        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+        var monthEnd = monthStart
+            .AddMonths(1)
+            .AddDays(-1);
         return (monthStart, monthEnd);
     }
 
@@ -54,7 +59,9 @@ public sealed class PaymentsController : CreditSystemControllerBase
     public async Task<ActionResult<PaymentMinimumDto>> GetMinimumPayment(int id, [FromQuery] DateOnly paymentDate,
         CancellationToken ct)
     {
-        var contract = await Db.Contracts.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+        var contract = await Db.Contracts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract is null)
         {
             return NotFound();
@@ -70,8 +77,9 @@ public sealed class PaymentsController : CreditSystemControllerBase
             return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
         }
 
-        var paidCount =
-            await Db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
+        var paidCount = await Db.Payments
+            .AsNoTracking()
+            .CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
         var finalPlannedPaymentDate = LoanScheduleEngine.PlannedPaymentDateForMonth(contract.IssueDate,
             contract.TermMonths - 1);
         var isWithinTerm = paymentDate <= finalPlannedPaymentDate;
@@ -148,7 +156,8 @@ public sealed class PaymentsController : CreditSystemControllerBase
             return Ok(new PaymentMinimumDto(minimum, interest, latePenalty, maxAllowedTotal));
         }
 
-        var lastPaymentDate = await Db.Payments.AsNoTracking()
+        var lastPaymentDate = await Db.Payments
+            .AsNoTracking()
             .Where(p => p.ContractId == id)
             .OrderByDescending(p => p.PaymentDate)
             .Select(p => (DateOnly?)p.PaymentDate)
@@ -174,7 +183,8 @@ public sealed class PaymentsController : CreditSystemControllerBase
     public async Task<ActionResult<int>> PostPayment(int id, [FromBody] PaymentCreateDto dto,
         CancellationToken ct)
     {
-        var contract = await Db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
+        var contract = await Db.Contracts
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
         if (contract is null)
         {
             return NotFound();
@@ -190,8 +200,9 @@ public sealed class PaymentsController : CreditSystemControllerBase
             return BadRequest("Дата платежа не может быть раньше даты заключения договора.");
         }
 
-        var paidCount =
-            await Db.Payments.AsNoTracking().CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
+        var paidCount = await Db.Payments
+            .AsNoTracking()
+            .CountAsync(p => p.ContractId == id && p.PaymentType == "monthly", ct);
         var finalPlannedPaymentDate = LoanScheduleEngine.PlannedPaymentDateForMonth(contract.IssueDate,
             contract.TermMonths - 1);
         var isWithinTerm = dto.PaymentDate <= finalPlannedPaymentDate;
@@ -225,7 +236,6 @@ public sealed class PaymentsController : CreditSystemControllerBase
         decimal interest;
         decimal latePenalty;
         decimal minimumRequired;
-        decimal maxAllowedTotal;
         decimal principalPaid;
         decimal earlyPenalty;
         var plannedDueDate = plannedPaymentDate;
@@ -291,7 +301,8 @@ public sealed class PaymentsController : CreditSystemControllerBase
         }
         else
         {
-            var lastPaymentDate = await Db.Payments.AsNoTracking()
+            var lastPaymentDate = await Db.Payments
+                .AsNoTracking()
                 .Where(p => p.ContractId == id)
                 .OrderByDescending(p => p.PaymentDate)
                 .Select(p => (DateOnly?)p.PaymentDate)
@@ -316,7 +327,7 @@ public sealed class PaymentsController : CreditSystemControllerBase
                 return BadRequest($"Минимальная сумма платежа: {minimumRequired:0.00}");
             }
 
-            maxAllowedTotal = decimal.Round(minimumRequired + balance, 2, MidpointRounding.AwayFromZero);
+            var maxAllowedTotal = decimal.Round(minimumRequired + balance, 2, MidpointRounding.AwayFromZero);
             if (dto.TotalAmount > maxAllowedTotal + LoanScheduleEngine.Epsilon)
             {
                 return BadRequest($"Сумма слишком большая. Максимально допустимая для этой даты: {maxAllowedTotal:0.00}");

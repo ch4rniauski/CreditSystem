@@ -19,13 +19,16 @@ public sealed class CreditProductsController : CreditSystemControllerBase
         InterestRateWriteDto dto,
         CancellationToken ct)
     {
-        var product = await Db.Credits.AsNoTracking().FirstOrDefaultAsync(c => c.Id == dto.CreditId, ct);
+        var product = await Db.Credits
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == dto.CreditId, ct);
         if (product is null)
         {
             return (false, "Кредитный продукт не найден.");
         }
 
-        if (!await Db.CreditCurrencies.AsNoTracking()
+        if (!await Db.CreditCurrencies
+                .AsNoTracking()
                 .AnyAsync(cc => cc.CreditId == dto.CreditId && cc.CurrencyId == dto.CurrencyId, ct))
         {
             return (false, "Валюта не привязана к выбранному кредитному продукту.");
@@ -52,15 +55,17 @@ public sealed class CreditProductsController : CreditSystemControllerBase
             return (false, "Дата начала периода не может быть позже даты окончания.");
         }
 
-        var overlapExists = await Db.InterestRates.AsNoTracking().AnyAsync(r =>
-            r.Id != excludeId &&
-            r.CreditId == dto.CreditId &&
-            r.CurrencyId == dto.CurrencyId &&
-            r.TermFromMonths <= dto.TermToMonths &&
-            r.TermToMonths >= dto.TermFromMonths &&
-            r.ValidFrom <= dto.ValidFrom &&
-            (r.ValidTo == null || r.ValidTo >= dto.ValidFrom) &&
-            (dto.ValidTo == null || r.ValidFrom <= dto.ValidTo), ct);
+        var overlapExists = await Db.InterestRates
+            .AsNoTracking()
+            .AnyAsync(r =>
+                r.Id != excludeId &&
+                r.CreditId == dto.CreditId &&
+                r.CurrencyId == dto.CurrencyId &&
+                r.TermFromMonths <= dto.TermToMonths &&
+                r.TermToMonths >= dto.TermFromMonths &&
+                r.ValidFrom <= dto.ValidFrom &&
+                (r.ValidTo == null || r.ValidTo >= dto.ValidFrom) &&
+                (dto.ValidTo == null || r.ValidFrom <= dto.ValidTo), ct);
 
         if (overlapExists)
         {
@@ -74,7 +79,8 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     [HttpGet("credit-products")]
     public async Task<ActionResult<List<CreditProductRow>>> GetCreditProducts(CancellationToken ct)
     {
-        var list = await Db.Credits.AsNoTracking()
+        var list = await Db.Credits
+            .AsNoTracking()
             .OrderBy(c => c.Name)
             .Select(c => new CreditProductRow(c.Id, c.Name, c.Description, c.ClientType, c.MinAmount, c.MaxAmount,
                 c.MinTermMonths, c.MaxTermMonths))
@@ -153,7 +159,9 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     [HttpDelete("credit-products/{id:int}")]
     public async Task<IActionResult> DeleteCreditProduct(int id, CancellationToken ct)
     {
-        if (await Db.Contracts.AsNoTracking().AnyAsync(co => co.CreditId == id, ct))
+        if (await Db.Contracts
+                .AsNoTracking()
+                .AnyAsync(co => co.CreditId == id, ct))
         {
             return Conflict("Есть договоры по этому продукту.");
         }
@@ -193,18 +201,23 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     public async Task<IActionResult> AddCreditCurrency(int creditId, [FromBody] CreditCurrencyWriteDto dto,
         CancellationToken ct)
     {
-        if (!await Db.Credits.AsNoTracking().AnyAsync(c => c.Id == creditId, ct))
+        if (!await Db.Credits
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == creditId, ct))
         {
             return NotFound("Кредит не найден.");
         }
 
-        if (!await Db.Currencies.AsNoTracking().AnyAsync(c => c.Id == dto.CurrencyId, ct))
+        if (!await Db.Currencies
+                .AsNoTracking()
+                .AnyAsync(c => c.Id == dto.CurrencyId, ct))
         {
             return BadRequest("Валюта не найдена.");
         }
 
-        var exists =
-            await Db.CreditCurrencies.AsNoTracking().AnyAsync(cc =>
+        var exists = await Db.CreditCurrencies
+            .AsNoTracking()
+            .AnyAsync(cc =>
                 cc.CreditId == creditId && cc.CurrencyId == dto.CurrencyId, ct);
         if (exists)
         {
@@ -262,14 +275,18 @@ public sealed class CreditProductsController : CreditSystemControllerBase
             return NotFound();
         }
 
-        if (await Db.InterestRates.AsNoTracking().AnyAsync(ir =>
-                ir.CreditId == creditId && ir.CurrencyId == currencyId, ct))
+        if (await Db.InterestRates
+                .AsNoTracking()
+                .AnyAsync(ir =>
+                    ir.CreditId == creditId && ir.CurrencyId == currencyId, ct))
         {
             return Conflict("Сначала удалите ставки по этой паре.");
         }
 
-        if (await Db.Contracts.AsNoTracking().AnyAsync(co =>
-                co.CreditId == creditId && co.CurrencyId == currencyId, ct))
+        if (await Db.Contracts
+                .AsNoTracking()
+                .AnyAsync(co =>
+                    co.CreditId == creditId && co.CurrencyId == currencyId, ct))
         {
             return Conflict("Пара используется в договоре.");
         }
@@ -282,7 +299,8 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     [HttpGet("credit-products/{creditId:int}/interest-rates")]
     public async Task<ActionResult<List<InterestRateRow>>> GetInterestRates(int creditId, CancellationToken ct)
     {
-        var list = await Db.InterestRates.AsNoTracking()
+        var list = await Db.InterestRates
+            .AsNoTracking()
             .Where(r => r.CreditId == creditId)
             .Join(Db.Currencies.AsNoTracking(), r => r.CurrencyId, cu => cu.Id,
                 (r, cu) => new InterestRateRow(r.Id, cu.Code, r.TermFromMonths, r.TermToMonths, r.RateType,
@@ -320,7 +338,9 @@ public sealed class CreditProductsController : CreditSystemControllerBase
                 return BadRequest("Неверный тип ставки");
         }
 
-        var duplicateExists = await Db.InterestRates.AsNoTracking().AnyAsync(r =>
+        var duplicateExists = await Db.InterestRates
+            .AsNoTracking()
+            .AnyAsync(r =>
                 r.CreditId == dto.CreditId &&
                 r.CurrencyId == dto.CurrencyId &&
                 r.TermFromMonths == dto.TermFromMonths &&
@@ -447,7 +467,9 @@ public sealed class CreditProductsController : CreditSystemControllerBase
     [HttpDelete("interest-rates/{id:int}")]
     public async Task<IActionResult> DeleteInterestRate(int id, CancellationToken ct)
     {
-        if (await Db.Contracts.AsNoTracking().AnyAsync(c => c.InterestRateId == id, ct))
+        if (await Db.Contracts
+                .AsNoTracking()
+                .AnyAsync(c => c.InterestRateId == id, ct))
         {
             return Conflict("Ставка используется в договоре.");
         }
