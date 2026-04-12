@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, LegalClientRow, PhysicalClientRow } from '../../core/api.service';
 import { phoneValidator, passportSeriesValidator, passportNumberValidator } from '../../core/validators';
@@ -17,9 +17,61 @@ export default class ClientsPage implements OnInit {
 
   readonly legalRows = signal<LegalClientRow[]>([]);
   readonly physRows = signal<PhysicalClientRow[]>([]);
+  readonly legalSearch = signal('');
+  readonly legalSortBy = signal('nameAsc');
+  readonly physSearch = signal('');
+  readonly physSortBy = signal('nameAsc');
   readonly legalEditId = signal<number | null>(null);
   readonly physEditId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly filteredLegalRows = computed(() => {
+    const term = this.legalSearch().trim().toLowerCase();
+    const sortBy = this.legalSortBy();
+
+    const filtered = this.legalRows().filter((row) =>
+      term.length === 0 ||
+      row.name.toLowerCase().includes(term) ||
+      row.ownershipType.toLowerCase().includes(term) ||
+      row.legalAddress.toLowerCase().includes(term) ||
+      (row.phone ?? '').toLowerCase().includes(term));
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'nameDesc') {
+        return b.name.localeCompare(a.name);
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  });
+
+  readonly filteredPhysRows = computed(() => {
+    const term = this.physSearch().trim().toLowerCase();
+    const normalizedTerm = term.replace(/\s+/g, '').toUpperCase();
+    const sortBy = this.physSortBy();
+
+    const filtered = this.physRows().filter((row) => {
+      const combinedPassport = `${row.passportSeries}${row.passportNumber}`.toUpperCase();
+      const spacedPassport = `${row.passportSeries} ${row.passportNumber}`.toLowerCase();
+
+      return term.length === 0 ||
+        row.fullName.toLowerCase().includes(term) ||
+        row.passportSeries.toLowerCase().includes(term) ||
+        row.passportNumber.toLowerCase().includes(term) ||
+        combinedPassport.includes(normalizedTerm) ||
+        spacedPassport.includes(term) ||
+        (row.actualAddress ?? '').toLowerCase().includes(term) ||
+        (row.phone ?? '').toLowerCase().includes(term);
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'nameDesc') {
+        return b.fullName.localeCompare(a.fullName);
+      }
+
+      return a.fullName.localeCompare(b.fullName);
+    });
+  });
 
   readonly legalForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -144,5 +196,21 @@ export default class ClientsPage implements OnInit {
       },
       error: (e) => this.error.set(typeof e.error === 'string' ? e.error : 'Невозможно удалить'),
     });
+  }
+
+  setLegalSearch(value: string) {
+    this.legalSearch.set(value);
+  }
+
+  setLegalSortBy(value: string) {
+    this.legalSortBy.set(value);
+  }
+
+  setPhysSearch(value: string) {
+    this.physSearch.set(value);
+  }
+
+  setPhysSortBy(value: string) {
+    this.physSortBy.set(value);
   }
 }

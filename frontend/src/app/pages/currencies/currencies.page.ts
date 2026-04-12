@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, CurrencyRow } from '../../core/api.service';
 import { currencyCodeValidator } from '../../core/validators';
@@ -16,8 +16,36 @@ export default class CurrenciesPage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly rows = signal<CurrencyRow[]>([]);
+  readonly search = signal('');
+  readonly sortBy = signal('codeAsc');
   readonly editingId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly filteredRows = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const sortBy = this.sortBy();
+
+    const filtered = this.rows().filter((row) =>
+      term.length === 0 ||
+      row.code.toLowerCase().includes(term) ||
+      row.name.toLowerCase().includes(term));
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'codeDesc') {
+        return b.code.localeCompare(a.code);
+      }
+
+      if (sortBy === 'nameAsc') {
+        return a.name.localeCompare(b.name);
+      }
+
+      if (sortBy === 'nameDesc') {
+        return b.name.localeCompare(a.name);
+      }
+
+      return a.code.localeCompare(b.code);
+    });
+  });
 
   readonly form = this.fb.nonNullable.group({
     code: ['', [Validators.required, currencyCodeValidator()]],
@@ -91,5 +119,13 @@ export default class CurrenciesPage implements OnInit {
       next: () => this.reload(),
       error: (e) => this.error.set(typeof e.error === 'string' ? e.error : 'Невозможно удалить'),
     });
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 }

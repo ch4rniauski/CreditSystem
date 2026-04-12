@@ -35,6 +35,35 @@
       }
     </section>
 
+    <section class="panel">
+      <h2>Поиск, фильтрация и сортировка</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="search()" (input)="setSearch($any($event.target).value)" placeholder="Поручитель, кредит, паспорт" />
+        </label>
+        <label>
+          Договор
+          <select [value]="contractFilter()" (change)="setContractFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            @for (c of draftPhysContracts(); track c.id) {
+              <option [value]="c.id">{{ c.id }} — {{ c.creditName }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="nameAsc">ФИО: А-Я</option>
+            <option value="nameDesc">ФИО: Я-А</option>
+            <option value="contractAsc">Договор: по возрастанию</option>
+            <option value="contractDesc">Договор: по убыванию</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено поручителей: {{ filteredGuarantors().length }}</p>
+    </section>
+
     <table>
       <thead>
         <tr>
@@ -45,7 +74,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (g of guarantors(); track g.internalId) {
+        @for (g of filteredGuarantors(); track g.internalId) {
           <tr>
             <td>{{ g.contractCreditName }}</td>
             <td>{{ g.guarantorFullName }}</td>

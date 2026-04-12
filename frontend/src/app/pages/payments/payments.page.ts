@@ -20,7 +20,44 @@ export default class PaymentsPage implements OnInit {
   readonly minimumPaymentDate = computed(() => this.selectedContract()?.issueDate ?? '');
   readonly minimumPayment = signal<PaymentMinimumDto | null>(null);
   readonly payments = signal<PaymentRow[]>([]);
+  readonly search = signal('');
+  readonly typeFilter = signal('all');
+  readonly sortBy = signal('paymentDateDesc');
   readonly error = signal<string | null>(null);
+
+  readonly filteredPayments = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const typeFilter = this.typeFilter();
+    const sortBy = this.sortBy();
+
+    const filtered = this.payments().filter((row) => {
+      const typeLabel = row.paymentType === 'monthly' ? 'ежемесячный' : 'досрочный';
+      const matchesSearch =
+        term.length === 0 ||
+        row.paymentDate.toLowerCase().includes(term) ||
+        row.plannedPaymentDate.toLowerCase().includes(term) ||
+        typeLabel.includes(term) ||
+        String(row.totalAmount).toLowerCase().includes(term);
+      const matchesType = typeFilter === 'all' || row.paymentType === typeFilter;
+      return matchesSearch && matchesType;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'paymentDateAsc') {
+        return a.paymentDate.localeCompare(b.paymentDate);
+      }
+
+      if (sortBy === 'amountAsc') {
+        return a.totalAmount - b.totalAmount;
+      }
+
+      if (sortBy === 'amountDesc') {
+        return b.totalAmount - a.totalAmount;
+      }
+
+      return b.paymentDate.localeCompare(a.paymentDate);
+    });
+  });
 
   readonly form = this.fb.nonNullable.group({
     paymentDate: ['', Validators.required],
@@ -108,5 +145,17 @@ export default class PaymentsPage implements OnInit {
       next: (rows) => this.payments.set(rows),
       error: () => this.payments.set([]),
     });
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setTypeFilter(value: string) {
+    this.typeFilter.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 }

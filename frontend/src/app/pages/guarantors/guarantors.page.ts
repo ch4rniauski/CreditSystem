@@ -15,11 +15,48 @@ export default class GuarantorsPage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly guarantors = signal<GuarantorRow[]>([]);
+  readonly search = signal('');
+  readonly contractFilter = signal('all');
+  readonly sortBy = signal('nameAsc');
   readonly draftPhysContracts = signal<ContractRow[]>([]);
   readonly phys = signal<PhysicalClientRow[]>([]);
   readonly selectedContractId = signal<number>(0);
   readonly editingGuarantorId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly filteredGuarantors = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const contractFilter = this.contractFilter();
+    const sortBy = this.sortBy();
+
+    const filtered = this.guarantors().filter((row) => {
+      const matchesSearch =
+        term.length === 0 ||
+        row.contractCreditName.toLowerCase().includes(term) ||
+        row.guarantorFullName.toLowerCase().includes(term) ||
+        row.passportSeries.toLowerCase().includes(term) ||
+        row.passportNumber.toLowerCase().includes(term);
+
+      const matchesContract = contractFilter === 'all' || String(row.contractId) === contractFilter;
+      return matchesSearch && matchesContract;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'nameDesc') {
+        return b.guarantorFullName.localeCompare(a.guarantorFullName);
+      }
+
+      if (sortBy === 'contractAsc') {
+        return a.contractId - b.contractId;
+      }
+
+      if (sortBy === 'contractDesc') {
+        return b.contractId - a.contractId;
+      }
+
+      return a.guarantorFullName.localeCompare(b.guarantorFullName);
+    });
+  });
 
   readonly availablePhys = computed(() => {
     const contractId = this.selectedContractId();
@@ -121,5 +158,17 @@ export default class GuarantorsPage implements OnInit {
       },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
     });
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setContractFilter(value: string) {
+    this.contractFilter.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 }

@@ -27,10 +27,43 @@
       }
     </section>
 
+    <section class="panel">
+      <h2>Поиск, фильтрация и сортировка продуктов</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input
+            [value]="productSearch()"
+            (input)="setProductSearch($any($event.target).value)"
+            placeholder="Название или описание"
+          />
+        </label>
+        <label>
+          Тип клиента
+          <select [value]="productClientTypeFilter()" (change)="setProductClientTypeFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            <option value="legal">Юридическое лицо</option>
+            <option value="physical">Физическое лицо</option>
+          </select>
+        </label>
+        <label>
+          Сортировка
+          <select [value]="productSortBy()" (change)="setProductSortBy($any($event.target).value)">
+            <option value="nameAsc">Название: А-Я</option>
+            <option value="nameDesc">Название: Я-А</option>
+            <option value="amountDesc">Макс. сумма: по убыванию</option>
+            <option value="amountAsc">Мин. сумма: по возрастанию</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено продуктов: {{ filteredProducts().length }}</p>
+    </section>
+
     <table>
       <thead>
         <tr>
           <th>Название</th>
+          <th>Описание</th>
           <th>Тип клиента</th>
           <th>Сумма</th>
           <th>Срок (мес.)</th>
@@ -38,9 +71,10 @@
         </tr>
       </thead>
       <tbody>
-        @for (p of products(); track p.id) {
+        @for (p of filteredProducts(); track p.id) {
           <tr>
             <td>{{ p.name }}</td>
+            <td>{{ p.description || '—' }}</td>
             <td>{{ p.clientType === 'legal' ? 'Юр лицо' : 'Физ лицо' }}</td>
             <td>{{ p.minAmount }} — {{ p.maxAmount }}</td>
             <td>{{ p.minTermMonths }} — {{ p.maxTermMonths }}</td>
@@ -67,6 +101,19 @@
         @if (currenciesError()) {
           <p class="err">{{ currenciesError() }}</p>
         }
+        <div class="form-grid">
+          <label>
+            Поиск валюты
+            <input [value]="ccSearch()" (input)="setCcSearch($any($event.target).value)" placeholder="Код валюты" />
+          </label>
+          <label>
+            Сортировка
+            <select [value]="ccSortBy()" (change)="setCcSortBy($any($event.target).value)">
+              <option value="codeAsc">Код: А-Я</option>
+              <option value="codeDesc">Код: Я-А</option>
+            </select>
+          </label>
+        </div>
         <table>
           <thead>
             <tr>
@@ -75,7 +122,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (row of ccRows(); track row.currencyCode) {
+            @for (row of filteredCcRows(); track row.currencyCode) {
               <tr>
                 <td>{{ row.currencyCode }}</td>
                 <td><button type="button" (click)="removeCc(row.currencyCode)">Удалить</button></td>
@@ -123,6 +170,29 @@
         @if (interestRatesError()) {
           <p class="err">{{ interestRatesError() }}</p>
         }
+        <div class="form-grid">
+          <label>
+            Поиск ставки
+            <input [value]="rateSearch()" (input)="setRateSearch($any($event.target).value)" placeholder="Валюта или значение" />
+          </label>
+          <label>
+            Тип ставки
+            <select [value]="rateTypeFilter()" (change)="setRateTypeFilter($any($event.target).value)">
+              <option value="all">Все</option>
+              <option value="fixed">Фиксированная</option>
+              <option value="floating">Плавающая</option>
+            </select>
+          </label>
+          <label>
+            Сортировка
+            <select [value]="rateSortBy()" (change)="setRateSortBy($any($event.target).value)">
+              <option value="validFromDesc">Дата начала: новые сверху</option>
+              <option value="validFromAsc">Дата начала: старые сверху</option>
+              <option value="termAsc">Срок: по возрастанию</option>
+              <option value="termDesc">Срок: по убыванию</option>
+            </select>
+          </label>
+        </div>
         <table>
           <thead>
             <tr>
@@ -135,7 +205,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (r of rateRows(); track r.id) {
+            @for (r of filteredRateRows(); track r.id) {
               <tr>
                 <td>{{ r.currencyCode }}</td>
                 <td>{{ r.termFromMonths }}–{{ r.termToMonths }}</td>
@@ -176,6 +246,29 @@
         @if (penaltiesError()) {
           <p class="err">{{ penaltiesError() }}</p>
         }
+        <div class="form-grid">
+          <label>
+            Поиск штрафов
+            <input [value]="penaltySearch()" (input)="setPenaltySearch($any($event.target).value)" placeholder="Тип или процент" />
+          </label>
+          <label>
+            Тип штрафа
+            <select [value]="penaltyTypeFilter()" (change)="setPenaltyTypeFilter($any($event.target).value)">
+              <option value="all">Все</option>
+              <option value="early_repayment">Досрочное</option>
+              <option value="late_payment">Просрочка</option>
+            </select>
+          </label>
+          <label>
+            Сортировка
+            <select [value]="penaltySortBy()" (change)="setPenaltySortBy($any($event.target).value)">
+              <option value="validFromDesc">Дата: новые сверху</option>
+              <option value="validFromAsc">Дата: старые сверху</option>
+              <option value="valueDesc">Процент: по убыванию</option>
+              <option value="valueAsc">Процент: по возрастанию</option>
+            </select>
+          </label>
+        </div>
         <table>
           <thead>
             <tr>
@@ -186,7 +279,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (p of penRows(); track p.id) {
+            @for (p of filteredPenRows(); track p.id) {
               <tr>
                 <td>{{ penaltyTypeLabel(p.penaltyType) }}</td>
                 <td>{{ p.valuePercent }}</td>

@@ -1,5 +1,48 @@
     <h1>Кредитные договоры</h1>
     <section class="panel">
+      <h2>Поиск, фильтрация и сортировка</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input
+            [value]="search()"
+            (input)="setSearch($any($event.target).value)"
+            placeholder="Клиент, продукт, валюта, ID"
+          />
+        </label>
+        <label>
+          Статус
+          <select [value]="statusFilter()" (change)="setStatusFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            <option value="Оформляется">Оформляется</option>
+            <option value="Оформлен">Оформлен</option>
+            <option value="Завершён">Завершён</option>
+          </select>
+        </label>
+        <label>
+          Тип клиента
+          <select [value]="clientTypeFilter()" (change)="setClientTypeFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            <option value="legal">Юридическое лицо</option>
+            <option value="physical">Физическое лицо</option>
+          </select>
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="issueDateDesc">Дата: новые сверху</option>
+            <option value="issueDateAsc">Дата: старые сверху</option>
+            <option value="amountDesc">Сумма: по убыванию</option>
+            <option value="amountAsc">Сумма: по возрастанию</option>
+            <option value="status">По статусу</option>
+            <option value="client">По клиенту</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено записей: {{ filteredRows().length }}</p>
+    </section>
+
+    <section class="panel">
       <form [formGroup]="form" (ngSubmit)="create()" class="form-grid">
         <label
           >Клиент
@@ -55,7 +98,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (c of rows(); track c.id) {
+        @for (c of filteredRows(); track c.id) {
           <tr>
             <td>{{ c.creditName }}</td>
             <td>{{ c.clientDisplay }}</td>

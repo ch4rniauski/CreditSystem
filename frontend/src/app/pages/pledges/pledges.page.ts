@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, ContractRow, CurrencyRow, PledgeRow } from '../../core/api.service';
 
@@ -18,8 +18,46 @@ export default class PledgesPage implements OnInit {
   readonly currencies = signal<CurrencyRow[]>([]);
   readonly selectedContractId = signal(0);
   readonly pledges = signal<PledgeRow[]>([]);
+  readonly search = signal('');
+  readonly typeFilter = signal('all');
+  readonly currencyFilter = signal('all');
+  readonly sortBy = signal('valueDesc');
   readonly editingPledgeId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly filteredPledges = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const type = this.typeFilter();
+    const currency = this.currencyFilter();
+    const sortBy = this.sortBy();
+
+    const filtered = this.pledges().filter((row) => {
+      const matchesSearch =
+        term.length === 0 ||
+        row.propertyName.toLowerCase().includes(term) ||
+        (row.currencyCode ?? '').toLowerCase().includes(term) ||
+        String(row.estimatedValue).toLowerCase().includes(term);
+      const matchesType = type === 'all' || row.propertyType === type;
+      const matchesCurrency = currency === 'all' || (row.currencyCode ?? '') === currency;
+      return matchesSearch && matchesType && matchesCurrency;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'valueAsc') {
+        return a.estimatedValue - b.estimatedValue;
+      }
+
+      if (sortBy === 'nameAsc') {
+        return a.propertyName.localeCompare(b.propertyName);
+      }
+
+      if (sortBy === 'nameDesc') {
+        return b.propertyName.localeCompare(a.propertyName);
+      }
+
+      return b.estimatedValue - a.estimatedValue;
+    });
+  });
 
   readonly form = this.fb.nonNullable.group({
     propertyName: ['', Validators.required],
@@ -139,5 +177,21 @@ export default class PledgesPage implements OnInit {
     }
 
     return c.clientDisplay;
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setTypeFilter(value: string) {
+    this.typeFilter.set(value);
+  }
+
+  setCurrencyFilter(value: string) {
+    this.currencyFilter.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 }

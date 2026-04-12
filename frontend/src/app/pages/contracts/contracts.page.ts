@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, ContractDetailsDto, ContractRow, CreditProductRow, CurrencyRow } from '../../core/api.service';
 
@@ -19,6 +19,10 @@ export default class ContractsPage implements OnInit, OnDestroy {
   private readonly document = inject(DOCUMENT);
 
   readonly rows = signal<ContractRow[]>([]);
+  readonly search = signal('');
+  readonly statusFilter = signal('all');
+  readonly clientTypeFilter = signal('all');
+  readonly sortBy = signal('issueDateDesc');
   readonly credits = signal<CreditProductRow[]>([]);
   readonly currencies = signal<CurrencyRow[]>([]);
   readonly availableCurrencies = signal<CurrencyRow[]>([]);
@@ -30,6 +34,51 @@ export default class ContractsPage implements OnInit, OnDestroy {
   readonly signing = signal(false);
   readonly editingContractId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly filteredRows = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const status = this.statusFilter();
+    const clientType = this.clientTypeFilter();
+    const sortBy = this.sortBy();
+
+    const filtered = this.rows().filter((row) => {
+      const matchesSearch =
+        term.length === 0 ||
+        row.creditName.toLowerCase().includes(term) ||
+        row.clientDisplay.toLowerCase().includes(term) ||
+        row.currencyCode.toLowerCase().includes(term) ||
+        String(row.id).includes(term);
+
+      const matchesStatus = status === 'all' || row.status === status;
+      const matchesClientType = clientType === 'all' || row.clientType === clientType;
+
+      return matchesSearch && matchesStatus && matchesClientType;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'issueDateAsc') {
+        return a.issueDate.localeCompare(b.issueDate);
+      }
+
+      if (sortBy === 'issueDateDesc') {
+        return b.issueDate.localeCompare(a.issueDate);
+      }
+
+      if (sortBy === 'amountAsc') {
+        return a.contractAmount - b.contractAmount;
+      }
+
+      if (sortBy === 'amountDesc') {
+        return b.contractAmount - a.contractAmount;
+      }
+
+      if (sortBy === 'status') {
+        return a.status.localeCompare(b.status);
+      }
+
+      return a.clientDisplay.localeCompare(b.clientDisplay);
+    });
+  });
 
   private readonly syncBodyScrollLock = effect(() => {
     const hasOpenModal =
@@ -99,6 +148,22 @@ export default class ContractsPage implements OnInit, OnDestroy {
       next: (r) => this.rows.set(r),
       error: () => this.error.set('Ошибка загрузки'),
     });
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setStatusFilter(value: string) {
+    this.statusFilter.set(value);
+  }
+
+  setClientTypeFilter(value: string) {
+    this.clientTypeFilter.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 
   private loadCreditConstraints(creditId: number, preferredCurrencyId?: number) {

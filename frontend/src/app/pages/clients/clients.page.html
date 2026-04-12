@@ -18,6 +18,19 @@
           <button type="button" (click)="cancelLegal()">Отмена</button>
         }
       </form>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="legalSearch()" (input)="setLegalSearch($any($event.target).value)" placeholder="Название, адрес, телефон" />
+        </label>
+        <label>
+          Сортировка
+          <select [value]="legalSortBy()" (change)="setLegalSortBy($any($event.target).value)">
+            <option value="nameAsc">Название: А-Я</option>
+            <option value="nameDesc">Название: Я-А</option>
+          </select>
+        </label>
+      </div>
       <table>
         <thead>
           <tr>
@@ -29,7 +42,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (r of legalRows(); track r.clientId) {
+          @for (r of filteredLegalRows(); track r.clientId) {
             <tr>
               <td>{{ r.name }}</td>
               <td>{{ r.ownershipType }}</td>
@@ -72,6 +85,19 @@
           <button type="button" (click)="cancelPhys()">Отмена</button>
         }
       </form>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="physSearch()" (input)="setPhysSearch($any($event.target).value)" placeholder="ФИО, паспорт, адрес, телефон" />
+        </label>
+        <label>
+          Сортировка
+          <select [value]="physSortBy()" (change)="setPhysSortBy($any($event.target).value)">
+            <option value="nameAsc">ФИО: А-Я</option>
+            <option value="nameDesc">ФИО: Я-А</option>
+          </select>
+        </label>
+      </div>
       <table>
         <thead>
           <tr>
@@ -83,7 +109,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (r of physRows(); track r.clientId) {
+          @for (r of filteredPhysRows(); track r.clientId) {
             <tr>
               <td>{{ r.fullName }}</td>
               <td>{{ r.passportSeries }} {{ r.passportNumber }}</td>

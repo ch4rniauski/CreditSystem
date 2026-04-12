@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiService, RefinanceRateRow } from '../../core/api.service';
 
@@ -15,7 +15,36 @@ export default class RefinancePage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly rows = signal<RefinanceRateRow[]>([]);
+  readonly search = signal('');
+  readonly sortBy = signal('fromDesc');
   readonly error = signal<string | null>(null);
+
+  readonly filteredRows = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const sortBy = this.sortBy();
+
+    const filtered = this.rows().filter((row) =>
+      term.length === 0 ||
+      row.validFromDate.toLowerCase().includes(term) ||
+      (row.validToDate ?? '').toLowerCase().includes(term) ||
+      String(row.ratePercent).toLowerCase().includes(term));
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'fromAsc') {
+        return a.validFromDate.localeCompare(b.validFromDate);
+      }
+
+      if (sortBy === 'rateAsc') {
+        return a.ratePercent - b.ratePercent;
+      }
+
+      if (sortBy === 'rateDesc') {
+        return b.ratePercent - a.ratePercent;
+      }
+
+      return b.validFromDate.localeCompare(a.validFromDate);
+    });
+  });
 
   readonly form = this.fb.nonNullable.group({
     validFromDate: ['', Validators.required],
@@ -76,5 +105,13 @@ export default class RefinancePage implements OnInit {
           this.error.set(errorMsg);
         },
       });
+  }
+
+  setSearch(value: string) {
+    this.search.set(value);
+  }
+
+  setSortBy(value: string) {
+    this.sortBy.set(value);
   }
 }

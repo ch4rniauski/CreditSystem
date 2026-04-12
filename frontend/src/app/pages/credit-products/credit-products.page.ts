@@ -26,11 +26,22 @@ export default class CreditProductsPage implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly products = signal<CreditProductRow[]>([]);
+  readonly productSearch = signal('');
+  readonly productClientTypeFilter = signal('all');
+  readonly productSortBy = signal('nameAsc');
   readonly currencies = signal<CurrencyRow[]>([]);
   readonly selectedProductId = signal<number | null>(null);
   readonly ccRows = signal<CreditCurrencyRow[]>([]);
   readonly rateRows = signal<InterestRateRow[]>([]);
   readonly penRows = signal<PenaltyRow[]>([]);
+  readonly ccSearch = signal('');
+  readonly ccSortBy = signal('codeAsc');
+  readonly rateSearch = signal('');
+  readonly rateTypeFilter = signal('all');
+  readonly rateSortBy = signal('validFromDesc');
+  readonly penaltySearch = signal('');
+  readonly penaltyTypeFilter = signal('all');
+  readonly penaltySortBy = signal('validFromDesc');
   readonly editingRateId = signal<number | null>(null);
   readonly editingPenaltyId = signal<number | null>(null);
 
@@ -44,6 +55,116 @@ export default class CreditProductsPage implements OnInit {
   readonly linkedCurrencyOptions = computed(() => {
     const codes = new Set(this.ccRows().map((r) => r.currencyCode));
     return this.currencies().filter((c) => codes.has(c.code));
+  });
+
+  readonly filteredProducts = computed(() => {
+    const term = this.productSearch().trim().toLowerCase();
+    const typeFilter = this.productClientTypeFilter();
+    const sortBy = this.productSortBy();
+
+    const filtered = this.products().filter((p) => {
+      const matchesSearch =
+        term.length === 0 ||
+        p.name.toLowerCase().includes(term) ||
+        (p.description ?? '').toLowerCase().includes(term);
+      const matchesType = typeFilter === 'all' || p.clientType === typeFilter;
+      return matchesSearch && matchesType;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'nameDesc') {
+        return b.name.localeCompare(a.name);
+      }
+
+      if (sortBy === 'amountDesc') {
+        return b.maxAmount - a.maxAmount;
+      }
+
+      if (sortBy === 'amountAsc') {
+        return a.minAmount - b.minAmount;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  });
+
+  readonly filteredCcRows = computed(() => {
+    const term = this.ccSearch().trim().toLowerCase();
+    const sortBy = this.ccSortBy();
+
+    const filtered = this.ccRows().filter((row) =>
+      term.length === 0 || row.currencyCode.toLowerCase().includes(term));
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'codeDesc') {
+        return b.currencyCode.localeCompare(a.currencyCode);
+      }
+
+      return a.currencyCode.localeCompare(b.currencyCode);
+    });
+  });
+
+  readonly filteredRateRows = computed(() => {
+    const term = this.rateSearch().trim().toLowerCase();
+    const typeFilter = this.rateTypeFilter();
+    const sortBy = this.rateSortBy();
+
+    const filtered = this.rateRows().filter((row) => {
+      const value = row.rateType === 'fixed' ? row.rateValue : row.additivePercent;
+      const matchesSearch =
+        term.length === 0 ||
+        row.currencyCode.toLowerCase().includes(term) ||
+        String(value ?? '').toLowerCase().includes(term);
+      const matchesType = typeFilter === 'all' || row.rateType === typeFilter;
+      return matchesSearch && matchesType;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'validFromAsc') {
+        return a.validFrom.localeCompare(b.validFrom);
+      }
+
+      if (sortBy === 'termAsc') {
+        return a.termFromMonths - b.termFromMonths;
+      }
+
+      if (sortBy === 'termDesc') {
+        return b.termFromMonths - a.termFromMonths;
+      }
+
+      return b.validFrom.localeCompare(a.validFrom);
+    });
+  });
+
+  readonly filteredPenRows = computed(() => {
+    const term = this.penaltySearch().trim().toLowerCase();
+    const typeFilter = this.penaltyTypeFilter();
+    const sortBy = this.penaltySortBy();
+
+    const filtered = this.penRows().filter((row) => {
+      const matchesSearch =
+        term.length === 0 ||
+        this.penaltyTypeLabel(row.penaltyType).toLowerCase().includes(term) ||
+        String(row.valuePercent).toLowerCase().includes(term);
+      const matchesType = typeFilter === 'all' || row.penaltyType === typeFilter;
+      return matchesSearch && matchesType;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'validFromAsc') {
+        return a.validFrom.localeCompare(b.validFrom);
+      }
+
+      if (sortBy === 'valueAsc') {
+        return a.valuePercent - b.valuePercent;
+      }
+
+      if (sortBy === 'valueDesc') {
+        return b.valuePercent - a.valuePercent;
+      }
+
+      return b.validFrom.localeCompare(a.validFrom);
+    });
   });
 
   readonly rateType = signal<'fixed' | 'floating'>('fixed');
@@ -606,5 +727,49 @@ export default class CreditProductsPage implements OnInit {
     }
 
     return type;
+  }
+
+  setProductSearch(value: string) {
+    this.productSearch.set(value);
+  }
+
+  setProductClientTypeFilter(value: string) {
+    this.productClientTypeFilter.set(value);
+  }
+
+  setProductSortBy(value: string) {
+    this.productSortBy.set(value);
+  }
+
+  setCcSearch(value: string) {
+    this.ccSearch.set(value);
+  }
+
+  setCcSortBy(value: string) {
+    this.ccSortBy.set(value);
+  }
+
+  setRateSearch(value: string) {
+    this.rateSearch.set(value);
+  }
+
+  setRateTypeFilter(value: string) {
+    this.rateTypeFilter.set(value);
+  }
+
+  setRateSortBy(value: string) {
+    this.rateSortBy.set(value);
+  }
+
+  setPenaltySearch(value: string) {
+    this.penaltySearch.set(value);
+  }
+
+  setPenaltyTypeFilter(value: string) {
+    this.penaltyTypeFilter.set(value);
+  }
+
+  setPenaltySortBy(value: string) {
+    this.penaltySortBy.set(value);
   }
 }

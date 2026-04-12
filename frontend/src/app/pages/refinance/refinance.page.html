@@ -10,6 +10,25 @@
         <p class="err">{{ error() }}</p>
       }
     </section>
+    <section class="panel">
+      <h2>Поиск, фильтрация и сортировка</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="search()" (input)="setSearch($any($event.target).value)" placeholder="Дата или ставка" />
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="fromDesc">Дата начала: новые сверху</option>
+            <option value="fromAsc">Дата начала: старые сверху</option>
+            <option value="rateDesc">Ставка: по убыванию</option>
+            <option value="rateAsc">Ставка: по возрастанию</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено ставок: {{ filteredRows().length }}</p>
+    </section>
     <table>
       <thead>
         <tr>
@@ -19,7 +38,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (r of rows(); track r.id) {
+        @for (r of filteredRows(); track r.id) {
           <tr>
             <td>{{ r.validFromDate | date: 'dd.MM.yyyy' }}</td>
             <td>{{ r.validToDate ? (r.validToDate | date: 'dd.MM.yyyy') : '—' }}</td>

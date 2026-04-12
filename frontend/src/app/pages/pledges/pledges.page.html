@@ -43,6 +43,44 @@
       }
     </section>
 
+    <section class="panel">
+      <h2>Поиск, фильтрация и сортировка</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="search()" (input)="setSearch($any($event.target).value)" placeholder="Имущество, валюта, стоимость" />
+        </label>
+        <label>
+          Тип
+          <select [value]="typeFilter()" (change)="setTypeFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            <option value="real_estate">Недвижимость</option>
+            <option value="vehicle">Автотранспорт</option>
+            <option value="equipment">Оборудование</option>
+          </select>
+        </label>
+        <label>
+          Валюта
+          <select [value]="currencyFilter()" (change)="setCurrencyFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            @for (c of currencies(); track c.id) {
+              <option [value]="c.code">{{ c.code }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="valueDesc">Стоимость: по убыванию</option>
+            <option value="valueAsc">Стоимость: по возрастанию</option>
+            <option value="nameAsc">Имущество: А-Я</option>
+            <option value="nameDesc">Имущество: Я-А</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено залогов: {{ filteredPledges().length }}</p>
+    </section>
+
     <table>
       <thead>
         <tr>
@@ -54,7 +92,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (p of pledges(); track p.internalId) {
+        @for (p of filteredPledges(); track p.internalId) {
           <tr>
             <td>{{ p.propertyName }}</td>
             <td>{{ p.estimatedValue }}</td>

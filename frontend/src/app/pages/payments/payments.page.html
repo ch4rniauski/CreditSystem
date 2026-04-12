@@ -30,7 +30,32 @@
     <section class="panel">
       <h2>Платежи по договору</h2>
 
-      @if (payments().length > 0) {
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="search()" (input)="setSearch($any($event.target).value)" placeholder="Дата, тип, сумма" />
+        </label>
+        <label>
+          Тип платежа
+          <select [value]="typeFilter()" (change)="setTypeFilter($any($event.target).value)">
+            <option value="all">Все</option>
+            <option value="monthly">Ежемесячный</option>
+            <option value="early">Досрочный</option>
+          </select>
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="paymentDateDesc">Дата платежа: новые сверху</option>
+            <option value="paymentDateAsc">Дата платежа: старые сверху</option>
+            <option value="amountDesc">Сумма: по убыванию</option>
+            <option value="amountAsc">Сумма: по возрастанию</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено платежей: {{ filteredPayments().length }}</p>
+
+      @if (filteredPayments().length > 0) {
         <table>
           <thead>
             <tr>
@@ -46,7 +71,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (p of payments(); track p.id) {
+            @for (p of filteredPayments(); track p.id) {
               <tr>
                 <td>{{ p.paymentDate | date: 'dd.MM.yyyy' }}</td>
                 <td>{{ p.plannedPaymentDate | date: 'dd.MM.yyyy' }}</td>

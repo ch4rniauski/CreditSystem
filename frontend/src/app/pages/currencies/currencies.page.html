@@ -15,6 +15,25 @@
         <p class="err">{{ error() }}</p>
       }
     </section>
+    <section class="panel">
+      <h2>Поиск, фильтрация и сортировка</h2>
+      <div class="form-grid">
+        <label>
+          Поиск
+          <input [value]="search()" (input)="setSearch($any($event.target).value)" placeholder="Код или название" />
+        </label>
+        <label>
+          Сортировка
+          <select [value]="sortBy()" (change)="setSortBy($any($event.target).value)">
+            <option value="codeAsc">Код: А-Я</option>
+            <option value="codeDesc">Код: Я-А</option>
+            <option value="nameAsc">Название: А-Я</option>
+            <option value="nameDesc">Название: Я-А</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Найдено валют: {{ filteredRows().length }}</p>
+    </section>
     <table>
       <thead>
         <tr>
@@ -24,7 +43,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (r of rows(); track r.id) {
+        @for (r of filteredRows(); track r.id) {
           <tr>
             <td>{{ r.code }}</td>
             <td>{{ r.name }}</td>
