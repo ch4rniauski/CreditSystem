@@ -112,7 +112,12 @@
           }
           <label>Дата начала ставки <input type="date" formControlName="validFrom" /></label>
           <label>Дата окончания ставки <input type="date" formControlName="validTo" /></label>
-          <button type="submit" [disabled]="!canAddRate()">Добавить</button>
+          <button type="submit" [disabled]="!canAddRate()">
+            {{ editingRateId() === null ? 'Добавить' : 'Сохранить ставку' }}
+          </button>
+          @if (editingRateId() !== null) {
+            <button type="button" (click)="cancelRateEdit()">Отмена</button>
+          }
         </form>
         <p class="hint">{{ rateTermLimitsLabel() }}</p>
         @if (interestRatesError()) {
@@ -142,7 +147,10 @@
                   {{ r.validFrom | date: 'dd.MM.yyyy' }}
                   {{ r.validTo ? '— ' + (r.validTo | date: 'dd.MM.yyyy') : '' }}
                 </td>
-                <td><button type="button" (click)="deleteRate(r)">Удалить</button></td>
+                <td>
+                  <button type="button" (click)="editRate(r)">Изменить</button>
+                  <button type="button" (click)="deleteRate(r)">Удалить</button>
+                </td>
               </tr>
             }
           </tbody>
@@ -158,7 +166,12 @@
           </select>
           <label>% <input type="number" step="0.0001" formControlName="valuePercent" /></label>
           <label>С <input type="date" formControlName="validFrom" /></label>
-          <button type="submit" [disabled]="penForm.invalid">Добавить</button>
+          <button type="submit" [disabled]="penForm.invalid">
+            {{ editingPenaltyId() === null ? 'Добавить' : 'Сохранить штраф' }}
+          </button>
+          @if (editingPenaltyId() !== null) {
+            <button type="button" (click)="cancelPenaltyEdit()">Отмена</button>
+          }
         </form>
         @if (penaltiesError()) {
           <p class="err">{{ penaltiesError() }}</p>
@@ -178,7 +191,10 @@
                 <td>{{ penaltyTypeLabel(p.penaltyType) }}</td>
                 <td>{{ p.valuePercent }}</td>
                 <td>{{ p.validFrom | date: 'dd.MM.yyyy' }}</td>
-                <td><button type="button" (click)="deletePenalty(p)">Удалить</button></td>
+                <td>
+                  <button type="button" (click)="editPenalty(p)">Изменить</button>
+                  <button type="button" (click)="deletePenalty(p)">Удалить</button>
+                </td>
               </tr>
             }
           </tbody>

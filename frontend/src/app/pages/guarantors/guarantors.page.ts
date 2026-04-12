@@ -18,6 +18,7 @@ export default class GuarantorsPage implements OnInit {
   readonly draftPhysContracts = signal<ContractRow[]>([]);
   readonly phys = signal<PhysicalClientRow[]>([]);
   readonly selectedContractId = signal<number>(0);
+  readonly editingGuarantorId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly availablePhys = computed(() => {
@@ -76,16 +77,36 @@ export default class GuarantorsPage implements OnInit {
     }
 
     const v = this.form.getRawValue();
-    this.api
-      .createGuarantor({ contractId: Number(v.contractId), physPersonClientId: Number(v.physPersonClientId) })
-      .subscribe({
+    const payload = { contractId: Number(v.contractId), physPersonClientId: Number(v.physPersonClientId) };
+    const editingId = this.editingGuarantorId();
+    const request$ = editingId === null
+      ? this.api.createGuarantor(payload)
+      : this.api.updateGuarantor(editingId, payload);
+
+    request$.subscribe({
         next: () => {
           this.reload();
+          this.editingGuarantorId.set(null);
           this.error.set(null);
         },
         error: (e) =>
           this.error.set(typeof e.error === 'string' ? e.error : e.error?.title ?? 'Ошибка'),
       });
+  }
+
+  edit(g: GuarantorRow) {
+    this.editingGuarantorId.set(g.internalId);
+    this.selectedContractId.set(g.contractId);
+    this.form.patchValue({
+      contractId: g.contractId,
+      physPersonClientId: g.physPersonClientId,
+    });
+    this.ensureGuarantorSelection();
+  }
+
+  cancelEdit() {
+    this.editingGuarantorId.set(null);
+    this.ensureGuarantorSelection();
   }
 
   remove(g: GuarantorRow) {

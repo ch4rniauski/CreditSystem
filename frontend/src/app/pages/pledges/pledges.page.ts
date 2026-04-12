@@ -18,6 +18,7 @@ export default class PledgesPage implements OnInit {
   readonly currencies = signal<CurrencyRow[]>([]);
   readonly selectedContractId = signal(0);
   readonly pledges = signal<PledgeRow[]>([]);
+  readonly editingPledgeId = signal<number | null>(null);
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
@@ -65,7 +66,13 @@ export default class PledgesPage implements OnInit {
       return;
     }
 
-    this.api.createPledge(cid, this.form.getRawValue()).subscribe({
+    const payload = this.form.getRawValue();
+    const editingId = this.editingPledgeId();
+    const request$ = editingId === null
+      ? this.api.createPledge(cid, payload)
+      : this.api.updatePledge(editingId, payload);
+
+    request$.subscribe({
       next: () => {
         this.form.reset({
           propertyName: '',
@@ -74,9 +81,33 @@ export default class PledgesPage implements OnInit {
           propertyType: 'real_estate',
           currencyId: this.currencies()[0]?.id ?? 0,
         });
+        this.editingPledgeId.set(null);
         this.loadPledges(cid);
       },
       error: (e) => this.error.set(e.error ?? 'Ошибка'),
+    });
+  }
+
+  edit(p: PledgeRow) {
+    const currencyId = this.currencies().find((c) => c.code === p.currencyCode)?.id ?? 0;
+    this.editingPledgeId.set(p.internalId);
+    this.form.patchValue({
+      propertyName: p.propertyName,
+      estimatedValue: p.estimatedValue,
+      assessmentDate: p.assessmentDate,
+      propertyType: p.propertyType,
+      currencyId,
+    });
+  }
+
+  cancelEdit() {
+    this.editingPledgeId.set(null);
+    this.form.reset({
+      propertyName: '',
+      estimatedValue: 1,
+      assessmentDate: '',
+      propertyType: 'real_estate',
+      currencyId: this.currencies()[0]?.id ?? 0,
     });
   }
 

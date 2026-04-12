@@ -18,7 +18,12 @@
             }
           </select>
         </label>
-        <button type="submit" [disabled]="form.invalid || availablePhys().length === 0">Добавить</button>
+        <button type="submit" [disabled]="form.invalid || availablePhys().length === 0">
+          {{ editingGuarantorId() === null ? 'Добавить' : 'Сохранить поручителя' }}
+        </button>
+        @if (editingGuarantorId() !== null) {
+          <button type="button" (click)="cancelEdit()">Отмена</button>
+        }
       </form>
 
       @if (availablePhys().length === 0) {
@@ -45,7 +50,10 @@
             <td>{{ g.contractCreditName }}</td>
             <td>{{ g.guarantorFullName }}</td>
             <td>{{ g.passportSeries }} {{ g.passportNumber }}</td>
-            <td><button type="button" (click)="remove(g)">Удалить</button></td>
+            <td>
+              <button type="button" (click)="edit(g)">Изменить</button>
+              <button type="button" (click)="remove(g)">Удалить</button>
+            </td>
           </tr>
         }
       </tbody>

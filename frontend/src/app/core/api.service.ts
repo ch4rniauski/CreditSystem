@@ -56,6 +56,9 @@ export class ApiService {
   createInterestRate(body: InterestRateWriteDto) {
     return this.http.post<number>(`${this.base}/credit-products/interest-rates`, body);
   }
+  updateInterestRate(id: number, body: InterestRateWriteDto) {
+    return this.http.put(`${this.base}/interest-rates/${id}`, body);
+  }
   deleteInterestRate(id: number) {
     return this.http.delete(`${this.base}/interest-rates/${id}`);
   }
@@ -65,6 +68,9 @@ export class ApiService {
   }
   createPenalty(body: PenaltyWriteDto) {
     return this.http.post<number>(`${this.base}/credit-products/penalties`, body);
+  }
+  updatePenalty(id: number, body: PenaltyWriteDto) {
+    return this.http.put(`${this.base}/penalties/${id}`, body);
   }
   deletePenalty(id: number) {
     return this.http.delete(`${this.base}/penalties/${id}`);
@@ -118,6 +124,9 @@ export class ApiService {
   createGuarantor(body: GuarantorCreateDto) {
     return this.http.post<number>(`${this.base}/guarantors`, body);
   }
+  updateGuarantor(id: number, body: GuarantorCreateDto) {
+    return this.http.put(`${this.base}/guarantors/${id}`, body);
+  }
   deleteGuarantor(id: number) {
     return this.http.delete(`${this.base}/guarantors/${id}`);
   }
@@ -127,6 +136,9 @@ export class ApiService {
   }
   createPledge(contractId: number, body: PledgeWriteDto) {
     return this.http.post<number>(`${this.base}/contracts/${contractId}/pledges`, body);
+  }
+  updatePledge(id: number, body: PledgeWriteDto) {
+    return this.http.put(`${this.base}/pledges/${id}`, body);
   }
   deletePledge(id: number) {
     return this.http.delete(`${this.base}/pledges/${id}`);
@@ -336,6 +348,8 @@ export interface ContractUpdateDto {
 }
 export interface GuarantorRow {
   internalId: number;
+  contractId: number;
+  physPersonClientId: number;
   contractCreditName: string;
   guarantorFullName: string;
   passportSeries: string;

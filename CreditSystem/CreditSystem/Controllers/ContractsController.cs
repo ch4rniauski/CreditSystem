@@ -86,7 +86,8 @@ public class ContractsController : CreditSystemControllerBase
         var guarantors = await Db.Guarantors.AsNoTracking()
             .Where(g => g.ContractId == id)
             .Join(Db.PhysPersons.AsNoTracking(), g => g.PhysPersonId, p => p.ClientId,
-                (g, p) => new GuarantorRow(g.Id, row.CreditName, p.FullName, p.PassportSeries, p.PassportNumber))
+                (g, p) => new GuarantorRow(g.Id, g.ContractId ?? 0, g.PhysPersonId ?? 0, row.CreditName, p.FullName,
+                    p.PassportSeries, p.PassportNumber))
             .ToListAsync(ct);
 
         var pledges = await Db.Pledges.AsNoTracking()

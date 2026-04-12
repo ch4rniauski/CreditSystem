@@ -31,6 +31,8 @@ export default class CreditProductsPage implements OnInit {
   readonly ccRows = signal<CreditCurrencyRow[]>([]);
   readonly rateRows = signal<InterestRateRow[]>([]);
   readonly penRows = signal<PenaltyRow[]>([]);
+  readonly editingRateId = signal<number | null>(null);
+  readonly editingPenaltyId = signal<number | null>(null);
 
   // Section-specific errors
   readonly productError = signal<string | null>(null);
@@ -441,7 +443,11 @@ export default class CreditProductsPage implements OnInit {
       validFrom: v.validFrom,
       validTo: v.validTo || null,
     };
-    this.api.createInterestRate(body).subscribe({
+    const editingId = this.editingRateId();
+    const request$ = editingId === null
+      ? this.api.createInterestRate(body)
+      : this.api.updateInterestRate(editingId, body);
+    request$.subscribe({
       next: () => {
         const product = this.selectedProduct();
         this.rateForm.reset({
@@ -458,12 +464,48 @@ export default class CreditProductsPage implements OnInit {
         this.interestRatesError.set(null);
         this.rateType.set('fixed');
         this.applyRateTypeValidators('fixed');
+        this.editingRateId.set(null);
       },
       error: (e) => {
         const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
         this.interestRatesError.set(errorMessage ?? 'Ошибка');
       },
     });
+  }
+
+  editRate(r: InterestRateRow) {
+    const currencyId = this.currencyIdByCode(r.currencyCode);
+    if (currencyId === null) {
+      this.interestRatesError.set('Валюта ставки не найдена.');
+      return;
+    }
+
+    this.editingRateId.set(r.id);
+    this.rateType.set(r.rateType === 'floating' ? 'floating' : 'fixed');
+    this.rateForm.patchValue({
+      currencyId,
+      termFromMonths: r.termFromMonths,
+      termToMonths: r.termToMonths,
+      rateType: r.rateType,
+      rateValue: r.rateType === 'fixed' ? r.rateValue : null,
+      additivePercent: r.rateType === 'floating' ? r.additivePercent : null,
+      validFrom: r.validFrom,
+      validTo: r.validTo ?? '',
+    });
+    this.applyRateTypeValidators(this.rateType());
+  }
+
+  cancelRateEdit() {
+    this.editingRateId.set(null);
+    this.rateForm.patchValue({
+      rateType: 'fixed',
+      rateValue: null,
+      additivePercent: null,
+      validFrom: '',
+      validTo: '',
+    });
+    this.rateType.set('fixed');
+    this.applyRateTypeValidators('fixed');
   }
 
   deleteRate(r: InterestRateRow) {
@@ -505,15 +547,38 @@ export default class CreditProductsPage implements OnInit {
       valuePercent: v.valuePercent,
       validFrom: v.validFrom,
     };
-    this.api.createPenalty(body).subscribe({
+    const editingId = this.editingPenaltyId();
+    const request$ = editingId === null
+      ? this.api.createPenalty(body)
+      : this.api.updatePenalty(editingId, body);
+    request$.subscribe({
       next: () => {
         this.reloadDetails();
         this.penaltiesError.set(null);
+        this.editingPenaltyId.set(null);
       },
       error: (e) => {
         const errorMessage = typeof e.error === 'string' ? e.error : e.error?.error;
         this.penaltiesError.set(errorMessage ?? 'Ошибка');
       },
+    });
+  }
+
+  editPenalty(p: PenaltyRow) {
+    this.editingPenaltyId.set(p.id);
+    this.penForm.patchValue({
+      penaltyType: p.penaltyType,
+      valuePercent: p.valuePercent,
+      validFrom: p.validFrom,
+    });
+  }
+
+  cancelPenaltyEdit() {
+    this.editingPenaltyId.set(null);
+    this.penForm.patchValue({
+      penaltyType: 'early_repayment',
+      valuePercent: 0,
+      validFrom: '',
     });
   }
 

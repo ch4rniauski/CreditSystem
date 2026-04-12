@@ -30,7 +30,12 @@
             }
           </select>
         </label>
-        <button type="submit" [disabled]="form.invalid || selectedContractId() === 0">Добавить</button>
+        <button type="submit" [disabled]="form.invalid || selectedContractId() === 0">
+          {{ editingPledgeId() === null ? 'Добавить' : 'Сохранить залог' }}
+        </button>
+        @if (editingPledgeId() !== null) {
+          <button type="button" (click)="cancelEdit()">Отмена</button>
+        }
       </form>
 
       @if (error()) {
@@ -55,7 +60,10 @@
             <td>{{ p.estimatedValue }}</td>
             <td>{{ pledgeTypeLabel(p.propertyType) }}</td>
             <td>{{ p.currencyCode }}</td>
-            <td><button type="button" (click)="remove(p)">Удалить</button></td>
+            <td>
+              <button type="button" (click)="edit(p)">Изменить</button>
+              <button type="button" (click)="remove(p)">Удалить</button>
+            </td>
           </tr>
         }
       </tbody>
